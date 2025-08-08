@@ -1,4 +1,4 @@
-package com.TechGroup.TechCop;
+package com.techgroup.techcop;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
