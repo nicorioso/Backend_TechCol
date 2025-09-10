@@ -3,17 +3,30 @@ package com.techgroup.techcop.domain;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Customer")
+@Table(name = "Customers")
 public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "customerId")
     private Integer customer_id;
+
+    @Column(name = "customerName")
     private String name;
+
+    @Column(name = "customerLastName")
     private String last_name;
+
+    @Column(name = "customerEmail")
     private String email;
+
+    @Column(name = "customerPassword")
     private String user_password;
+
+    @Column(name = "customerPhoneNumber")
     private String phone_number;
+
+    @Column(name = "roleId")
     private Integer role_id;
 
     public Customer() {
