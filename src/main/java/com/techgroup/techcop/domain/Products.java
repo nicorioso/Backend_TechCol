@@ -1,5 +1,3 @@
-package com.techgroup.techcop.domain;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
@@ -69,4 +67,3 @@ public class Products {
     public void setPrice(Double price) {
         this.price = price;
     }
-}
