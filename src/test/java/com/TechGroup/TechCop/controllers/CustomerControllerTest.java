@@ -1,7 +1,7 @@
 package com.techgroup.techcop.controllers;
 
 import com.techgroup.techcop.domain.Customer;
-import com.techgroup.techcop.service.CustomerService;
+import com.techgroup.techcop.service.CustomerServiceTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,10 +12,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/Customer")
-public class CustomerController {
+public class CustomerControllerTest {
 
     @Autowired
-    private CustomerService customerService;
+    private CustomerServiceTest customerService;
 
     @GetMapping
     public ResponseEntity<?> getAllCustomers() {
