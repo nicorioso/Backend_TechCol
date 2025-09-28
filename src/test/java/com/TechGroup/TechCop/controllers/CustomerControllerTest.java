@@ -43,7 +43,7 @@ public class CustomerControllerTest {
         Optional<Customer> customerOpt = customerService.getCustomerById(id);
         if (customerOpt.isPresent()) {
             Customer existingCustomer = customerOpt.get();
-            existingCustomer.setName(updatedCustomer.getName());
+            existingCustomer.setRoleId(updatedCustomer.getName());
             existingCustomer.setLast_name(updatedCustomer.getLast_name());
             existingCustomer.setEmail(updatedCustomer.getEmail());
             existingCustomer.setUser_password(updatedCustomer.getUser_password());

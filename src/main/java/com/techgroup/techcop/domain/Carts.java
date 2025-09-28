@@ -2,26 +2,31 @@ package com.techgroup.techcop.domain;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
-@Table(name = "Carts")
+@Table(name = "carts")
 public class Carts {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cartId")
     private Integer cart_id;
+
+    @Column(name = "cartPrice")
     private Double cart_price;
-    private Integer product_id;
+
+    @Column(name = "createAt")
+    private String create_at;
+
+    @Column(name = "customerId")
     private Integer customer_id;
-    private Integer amount;
+
+    @OneToMany(mappedBy = "carts", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CartItem> items = new ArrayList<>();
 
     public Carts() {}
-
-    public Carts(Integer cart_id, Double cart_price, Integer product_id, Integer customer_id) {
-        this.cart_id = cart_id;
-        this.cart_price = cart_price;
-        this.product_id = product_id;
-        this.customer_id = customer_id;
-    }
 
     public Integer getCart_id() {
         return cart_id;
@@ -39,12 +44,12 @@ public class Carts {
         this.cart_price = cart_price;
     }
 
-    public Integer getProduct_id() {
-        return product_id;
+    public String getCreate_at() {
+        return create_at;
     }
 
-    public void setProduct_id(Integer product_id) {
-        this.product_id = product_id;
+    public void setCreate_at(String create_at) {
+        this.create_at = create_at;
     }
 
     public Integer getCustomer_id() {
@@ -54,41 +59,4 @@ public class Carts {
     public void setCustomer_id(Integer customer_id) {
         this.customer_id = customer_id;
     }
-
-    public Integer getAmount() {
-        return amount;
-    }
-
-    public void setAmount(Integer amount) {
-        this.amount = amount;
-    }
-    //private Products products;
-    //private int cantidad;
-
-    /*public Carts(Products products, int cantidad) {
-        this.products = products;
-        this.cantidad = cantidad;
-    }
-
-    // Getters y Setters
-    public Products getProduct() {
-        return products;
-    }
-
-    public void setProduct(Products products) {
-        this.products = products;
-    }
-
-    public int getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(int cantidad) {
-        this.cantidad = cantidad;
-    }
-
-    public double getSubtotal() {
-        return products.getPrice() * cantidad;
-    }*/
-
 }

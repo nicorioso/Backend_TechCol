@@ -40,7 +40,7 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public Carts postCartItem(Carts carts) {
+    public Carts postCartItem(CartItem cartItem) {
         List<Carts> cartsItems = cartsDBA.findAll();
         for (Carts c : cartsItems) {
             if (c.getProduct_id().equals(carts.getProduct_id()) &&

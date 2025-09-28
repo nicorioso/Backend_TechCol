@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface CartService {
 
     public List<CartItem> getCartItems();
-    public Carts postCartItem(Carts id);
+    public Carts postCartItem(CartItem id);
     //public Carts putCartItem(Carts cartItem);
     public void deleteCartItem(Integer id);
 

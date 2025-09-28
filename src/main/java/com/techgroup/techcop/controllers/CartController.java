@@ -23,12 +23,12 @@ public class CartController {
     }
 
     @PostMapping
-    public ResponseEntity<?> postCartService(@RequestBody Carts cart) {
+    public ResponseEntity<?> postCartService(@RequestBody CartItem cartItem) {
         try {
-            return ResponseEntity.ok().body(cartService.postCartItem(cart));
+            return ResponseEntity.ok().body(cartService.postCartItem(cartItem));
         }catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No existe el producto con el id " + cart.getCart_id());
+                    .body("No existe el producto con el id " + cartItem.getCart_id());
         }
     }
 

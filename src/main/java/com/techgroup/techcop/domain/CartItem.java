@@ -1,57 +1,75 @@
 package com.techgroup.techcop.domain;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "cart_details")
 public class CartItem {
-    private Integer cartsId;
-    private Double total;
-    private Integer amount;
-    private Products products;
-    private Customer customer;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cartDetailId")
+    private Integer cart_item_id;
 
-    public CartItem(Integer cartsId, Double total, Integer amount, Products products, Customer customer) {
-        this.cartsId = cartsId;
-        this.total = total;
-        this.amount = amount;
-        this.products = products;
-        this.customer = customer;
+    @Column(name = "quantity")
+    private Integer quantity;
+
+    @Column(name = "unitprice")
+    private Double unit_price;
+
+    @ManyToOne
+    @JoinColumn(name = "cartId")
+    private Integer cart_id;
+
+    @Column(name = "productId")
+    private Integer product_id;
+
+    public CartItem() {}
+
+    public CartItem(Integer cart_item_id, Integer quantity, Double unit_price, Integer cart_id, Integer product_id) {
+        this.cart_item_id = cart_item_id;
+        this.quantity = quantity;
+        this.unit_price = unit_price;
+        this.cart_id = cart_id;
+        this.product_id = product_id;
     }
 
-    public Integer getCartsId() {
-        return cartsId;
+    public Integer getCart_item_id() {
+        return cart_item_id;
     }
 
-    public void setCartsId(Integer cartsId) {
-        this.cartsId = cartsId;
+    public void setCart_item_id(Integer cart_item_id) {
+        this.cart_item_id = cart_item_id;
     }
 
-    public Double getTotal() {
-        return products.getPrice() * amount;
+    public Integer getQuantity() {
+        return quantity;
     }
 
-    public void setTotal(Double total) {
-        this.total = total;
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
     }
 
-    public Integer getAmount() {
-        return amount;
+    public Double getUnit_price() {
+        return unit_price;
     }
 
-    public void setAmount(Integer amount) {
-        this.amount = amount;
+    public void setUnit_price(Double unit_price) {
+        this.unit_price = unit_price;
     }
 
-    public Products getProducts() {
-        return products;
+    public Integer getCart_id() {
+        return cart_id;
     }
 
-    public void setProducts(Products products) {
-        this.products = products;
+    public void setCart_id(Integer cart_id) {
+        this.cart_id = cart_id;
     }
 
-    public Customer getCustomer() {
-        return customer;
+    public Integer getProduct_id() {
+        return product_id;
     }
 
-    public void setCustomer(Customer customer) {
-        this.customer = customer;
+    public void setProduct_id(Integer product_id) {
+        this.product_id = product_id;
     }
 }
