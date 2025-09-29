@@ -41,21 +41,22 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public Carts postCartItem(CartItem cartItem) {
-        List<Carts> cartsItems = cartsDBA.findAll();
-        for (Carts c : cartsItems) {
-            if (c.getProduct_id().equals(carts.getProduct_id()) &&
-                    c.getCustomer_id().equals(carts.getCustomer_id())) {
-                Products product = productsDBA.findById(carts.getProduct_id())
-                        .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + carts.getProduct_id()));
-                c.setAmount(c.getAmount() + carts.getAmount());
-                c.setCart_price(product.getPrice() * c.getAmount());
-                return cartsDBA.save(c);
-            }
-        }
-        Products product = productsDBA.findById(carts.getProduct_id())
-                .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + carts.getProduct_id()));
-        carts.setCart_price(product.getPrice() * carts.getAmount());
-        return cartsDBA.save(carts);
+
+//        List<Carts> cartsItems = cartsDBA.findAll();
+//        for (Carts c : cartsItems) {
+//            if (c.getProduct_id().equals(carts.getProduct_id()) &&
+//                    c.getCustomer_id().equals(carts.getCustomer_id())) {
+//                Products product = productsDBA.findById(carts.getProduct_id())
+//                        .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + carts.getProduct_id()));
+//                c.setAmount(c.getAmount() + carts.getAmount());
+//                c.setCart_price(product.getPrice() * c.getAmount());
+//                return cartsDBA.save(c);
+//            }
+//        }
+//        Products product = productsDBA.findById(carts.getProduct_id())
+//                .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + carts.getProduct_id()));
+//        carts.setCart_price(product.getPrice() * carts.getAmount());
+//        return cartsDBA.save(carts);
     }
 
 
