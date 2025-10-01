@@ -1,10 +1,14 @@
 package com.techgroup.techcop.service;
 
 
+import com.techgroup.techcop.domain.Carts;
 import com.techgroup.techcop.domain.Customer;
+import com.techgroup.techcop.repository.CartsDBA;
 import com.techgroup.techcop.repository.CustomerDBA;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +17,9 @@ public class CustomerServiceImpl implements CustomerService{
 
     @Autowired
     private CustomerDBA customerDBA;
+
+    @Autowired
+    private CartsDBA cartsDBA;
 
     @Override
     public List<Customer> getCustomer() {
@@ -31,7 +38,16 @@ public class CustomerServiceImpl implements CustomerService{
 
     @Override
     public Customer createCustomer(Customer customer) {
-        return customerDBA.save(customer);
+        customerDBA.save(customer);
+
+        Carts cart = new Carts();
+        cart.setCustomer(customer);
+        cart.setCart_price(0.0);
+        cart.setCreate_at(LocalDateTime.now().toString());
+
+        cartsDBA.save(cart);
+
+        return customer;
     }
 
     @Override

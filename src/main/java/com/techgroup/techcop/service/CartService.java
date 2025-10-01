@@ -8,9 +8,9 @@ import java.util.Optional;
 
 public interface CartService {
 
-    public List<CartItem> getCartItems();
-    public Carts postCartItem(CartItem id);
+    public List<CartItem> getCartItems(Integer customerId);
+    public Carts postCartItem(CartItem id, Integer customerId);
     //public Carts putCartItem(Carts cartItem);
-    public void deleteCartItem(Integer id);
+    public void deleteCartItem(Integer CartItemId, Integer customerId);
 
 }

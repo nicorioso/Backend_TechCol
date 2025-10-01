@@ -1,5 +1,6 @@
 package com.techgroup.techcop.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -16,20 +17,21 @@ public class CartItem {
     @Column(name = "unitprice")
     private Double unit_price;
 
-    @ManyToOne
-    @JoinColumn(name = "cartId")
-    private Integer cart_id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cartId", nullable = false)
+    @JsonIgnore
+    private Carts cart;
 
     @Column(name = "productId")
     private Integer product_id;
 
     public CartItem() {}
 
-    public CartItem(Integer cart_item_id, Integer quantity, Double unit_price, Integer cart_id, Integer product_id) {
+    public CartItem(Integer cart_item_id, Integer quantity, Double unit_price, Carts cart, Integer product_id) {
         this.cart_item_id = cart_item_id;
         this.quantity = quantity;
         this.unit_price = unit_price;
-        this.cart_id = cart_id;
+        this.cart = cart;
         this.product_id = product_id;
     }
 
@@ -57,12 +59,12 @@ public class CartItem {
         this.unit_price = unit_price;
     }
 
-    public Integer getCart_id() {
-        return cart_id;
+    public Carts getCart() {
+        return cart;
     }
 
-    public void setCart_id(Integer cart_id) {
-        this.cart_id = cart_id;
+    public void setCart(Carts cart) {
+        this.cart = cart;
     }
 
     public Integer getProduct_id() {

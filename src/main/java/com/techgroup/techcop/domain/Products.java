@@ -9,13 +9,20 @@ public class Products {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "product_id")
+    @Column(name = "productId")
     private Integer product_id;
+
     @Column(name = "productName")
     @JsonProperty("productName")
     private String productName;
+
+    @Column(name = "productDescription")
     private String description;
+
+    @Column(name = "productPrice")
     private Double price;
+
+    @Column(name = "productStock")
     private Integer stock;
 
     public Products() {

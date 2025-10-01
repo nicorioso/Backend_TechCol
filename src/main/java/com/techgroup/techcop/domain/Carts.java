@@ -1,5 +1,6 @@
 package com.techgroup.techcop.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -17,16 +18,26 @@ public class Carts {
     @Column(name = "cartPrice")
     private Double cart_price;
 
-    @Column(name = "createAt")
+    @Column(name = "createdAt")
     private String create_at;
 
-    @Column(name = "customerId")
-    private Integer customer_id;
+    @OneToOne
+    @JoinColumn(name = "customerId")
+    @JsonIgnore
+    private Customer customer;
 
-    @OneToMany(mappedBy = "carts", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CartItem> items = new ArrayList<>();
 
     public Carts() {}
+
+    public Carts(Integer cart_id, Double cart_price, String create_at, Customer customer, List<CartItem> items) {
+        this.cart_id = cart_id;
+        this.cart_price = cart_price;
+        this.create_at = create_at;
+        this.customer = customer;
+        this.items = items;
+    }
 
     public Integer getCart_id() {
         return cart_id;
@@ -52,11 +63,19 @@ public class Carts {
         this.create_at = create_at;
     }
 
-    public Integer getCustomer_id() {
-        return customer_id;
+    public Customer getCustomer() {
+        return customer;
     }
 
-    public void setCustomer_id(Integer customer_id) {
-        this.customer_id = customer_id;
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+    }
+
+    public List<CartItem> getItems() {
+        return items;
+    }
+
+    public void setItems(List<CartItem> items) {
+        this.items = items;
     }
 }
