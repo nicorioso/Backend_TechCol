@@ -1,26 +1,42 @@
 package com.techgroup.techcop.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
-@Table(name = "Carts")
+@Table(name = "carts")
 public class Carts {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cartId")
     private Integer cart_id;
+
+    @Column(name = "cartPrice")
     private Double cart_price;
-    private Integer product_id;
-    private Integer customer_id;
-    private Integer amount;
+
+    @Column(name = "createdAt")
+    private String create_at;
+
+    @OneToOne
+    @JoinColumn(name = "customerId")
+    @JsonIgnore
+    private Customer customer;
+
+    @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CartItem> items = new ArrayList<>();
 
     public Carts() {}
 
-    public Carts(Integer cart_id, Double cart_price, Integer product_id, Integer customer_id) {
+    public Carts(Integer cart_id, Double cart_price, String create_at, Customer customer, List<CartItem> items) {
         this.cart_id = cart_id;
         this.cart_price = cart_price;
-        this.product_id = product_id;
-        this.customer_id = customer_id;
+        this.create_at = create_at;
+        this.customer = customer;
+        this.items = items;
     }
 
     public Integer getCart_id() {
@@ -39,56 +55,27 @@ public class Carts {
         this.cart_price = cart_price;
     }
 
-    public Integer getProduct_id() {
-        return product_id;
+    public String getCreate_at() {
+        return create_at;
     }
 
-    public void setProduct_id(Integer product_id) {
-        this.product_id = product_id;
+    public void setCreate_at(String create_at) {
+        this.create_at = create_at;
     }
 
-    public Integer getCustomer_id() {
-        return customer_id;
+    public Customer getCustomer() {
+        return customer;
     }
 
-    public void setCustomer_id(Integer customer_id) {
-        this.customer_id = customer_id;
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
     }
 
-    public Integer getAmount() {
-        return amount;
+    public List<CartItem> getItems() {
+        return items;
     }
 
-    public void setAmount(Integer amount) {
-        this.amount = amount;
+    public void setItems(List<CartItem> items) {
+        this.items = items;
     }
-    //private Products products;
-    //private int cantidad;
-
-    /*public Carts(Products products, int cantidad) {
-        this.products = products;
-        this.cantidad = cantidad;
-    }
-
-    // Getters y Setters
-    public Products getProduct() {
-        return products;
-    }
-
-    public void setProduct(Products products) {
-        this.products = products;
-    }
-
-    public int getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(int cantidad) {
-        this.cantidad = cantidad;
-    }
-
-    public double getSubtotal() {
-        return products.getPrice() * cantidad;
-    }*/
-
 }

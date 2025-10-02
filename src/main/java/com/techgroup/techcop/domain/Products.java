@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "Products")
+@Table(name = "products")
 public class Products {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "product_id")
+    @Column(name = "productId")
     private Integer product_id;
 
     @Column(name = "productName")

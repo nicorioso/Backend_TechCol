@@ -29,6 +29,9 @@ public class Customer {
     @Column(name = "roleId")
     private Integer roleId;
 
+    @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Carts cart;
+
     public Customer() {
 
     }
@@ -97,5 +100,13 @@ public class Customer {
 
     public void setRoleId(Integer roleId) {
         this.roleId = roleId;
+    }
+
+    public Carts getCart() {
+        return cart;
+    }
+
+    public void setCart(Carts cart) {
+        this.cart = cart;
     }
 }
