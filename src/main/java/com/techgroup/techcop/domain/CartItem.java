@@ -1,0 +1,77 @@
+package com.techgroup.techcop.domain;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "cart_details")
+public class CartItem {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cartDetailId")
+    private Integer cart_item_id;
+
+    @Column(name = "quantity")
+    private Integer quantity;
+
+    @Column(name = "unitprice")
+    private Double unit_price;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cartId", nullable = false)
+    @JsonIgnore
+    private Carts cart;
+
+    @Column(name = "productId")
+    private Integer product_id;
+
+    public CartItem() {}
+
+    public CartItem(Integer cart_item_id, Integer quantity, Double unit_price, Carts cart, Integer product_id) {
+        this.cart_item_id = cart_item_id;
+        this.quantity = quantity;
+        this.unit_price = unit_price;
+        this.cart = cart;
+        this.product_id = product_id;
+    }
+
+    public Integer getCart_item_id() {
+        return cart_item_id;
+    }
+
+    public void setCart_item_id(Integer cart_item_id) {
+        this.cart_item_id = cart_item_id;
+    }
+
+    public Integer getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+
+    public Double getUnit_price() {
+        return unit_price;
+    }
+
+    public void setUnit_price(Double unit_price) {
+        this.unit_price = unit_price;
+    }
+
+    public Carts getCart() {
+        return cart;
+    }
+
+    public void setCart(Carts cart) {
+        this.cart = cart;
+    }
+
+    public Integer getProduct_id() {
+        return product_id;
+    }
+
+    public void setProduct_id(Integer product_id) {
+        this.product_id = product_id;
+    }
+}
