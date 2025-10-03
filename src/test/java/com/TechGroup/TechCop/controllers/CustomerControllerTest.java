@@ -34,7 +34,7 @@ public class CustomerControllerTest {
     @PostMapping
     public ResponseEntity<?> postCustomer(@RequestBody Customer customer) {
         Customer nuevo = customerService.createCustomer(customer);
-        URI location = URI.create("/Customer/" + nuevo.getCustomer_id());
+        URI location = URI.create("/Customer/" + nuevo.getCustomerId());
         return ResponseEntity.created(location).body(nuevo);
     }
 
@@ -43,12 +43,12 @@ public class CustomerControllerTest {
         Optional<Customer> customerOpt = customerService.getCustomerById(id);
         if (customerOpt.isPresent()) {
             Customer existingCustomer = customerOpt.get();
-            existingCustomer.setRoleId(updatedCustomer.getName());
-            existingCustomer.setLast_name(updatedCustomer.getLast_name());
-            existingCustomer.setEmail(updatedCustomer.getEmail());
-            existingCustomer.setUser_password(updatedCustomer.getUser_password());
-            existingCustomer.setPhone_number(updatedCustomer.getPhone_number());
-            existingCustomer.setRole_id(updatedCustomer.getRole_id());
+            existingCustomer.setCustomerName(updatedCustomer.getCustomerName());
+            existingCustomer.setCustomerLastName(updatedCustomer.getCustomerLastName());
+            existingCustomer.setCustomerEmail(updatedCustomer.getCustomerEmail());
+            existingCustomer.setCustomerPassword(updatedCustomer.getCustomerPassword());
+            existingCustomer.setCustomerPhoneNumber(updatedCustomer.getCustomerPhoneNumber());
+            existingCustomer.setRoleId(updatedCustomer.getRoleId());
             // Agrega más campos si los tienes en tu entidad
 
             Customer saved = customerService.createCustomer(existingCustomer); // reutilizamos createCustomer para guardar
@@ -64,7 +64,7 @@ public class CustomerControllerTest {
             Customer patch = customerService.patchCustomer(id, customer);
             return ResponseEntity.ok(patch);
         }catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No existe el producto con el id " + customer.getCustomer_id());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No existe el producto con el id " + customer.getCustomerId());
         }
     }
 
