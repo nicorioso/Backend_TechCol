@@ -124,9 +124,6 @@ public class Customer {
     public void setCart(Carts cart) {
         this.cart = cart;
     }
-<<<<<<< HEAD
-}
-=======
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
@@ -144,4 +141,3 @@ public class Customer {
         this.updatedAt = updatedAt;
     }
 }
->>>>>>> 5d0de4a502e7753643de61ee9347d9a65a82f008

@@ -11,8 +11,7 @@ import java.net.URI;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/Customer")
-@CrossOrigin(origins = "http://localhost:5173")
+@RequestMapping("/customers")
 public class CustomerController {
 
     @Autowired
@@ -26,21 +25,39 @@ public class CustomerController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getCustomerById(@PathVariable Integer id) {
         Optional<Customer> customerOpt = customerService.getCustomerById(id);
-
         return customerOpt
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/register")  // ← AGREGAR: endpoint de registro
+    public ResponseEntity<?> registerCustomer(@RequestBody Customer customer) {
+        try {
+            Customer nuevo = customerService.createCustomer(customer);
+            URI location = URI.create("/customers/" + nuevo.getCustomerId());
+            return ResponseEntity.created(location).body(nuevo);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("El email ya está registrado");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @PostMapping
-    public ResponseEntity<?> postCustomer(@RequestBody Customer customer) {
-        Customer nuevo = customerService.createCustomer(customer);
-        URI location = URI.create("/Customer/" + nuevo.getCustomerId());
-        return ResponseEntity.created(location).body(nuevo);
+    public ResponseEntity<?> postCustomer( @RequestBody Customer customer) {
+        try {
+            Customer nuevo = customerService.createCustomer(customer);
+            URI location = URI.create("/customers/" + nuevo.getCustomerId());
+            return ResponseEntity.created(location).body(nuevo);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("El email ya está registrado");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCustomer(@PathVariable Integer id, @RequestBody Customer updatedCustomer) {
+    public ResponseEntity<?> updateCustomer(@PathVariable Integer id,@RequestBody Customer updatedCustomer) {
         Optional<Customer> customerOpt = customerService.getCustomerById(id);
         if (customerOpt.isPresent()) {
             Customer existingCustomer = customerOpt.get();
@@ -50,9 +67,8 @@ public class CustomerController {
             existingCustomer.setCustomerPassword(updatedCustomer.getCustomerPassword());
             existingCustomer.setCustomerPhoneNumber(updatedCustomer.getCustomerPhoneNumber());
             existingCustomer.setRoleId(updatedCustomer.getRoleId());
-            // Agrega más campos si los tienes en tu entidad
 
-            Customer saved = customerService.createCustomer(existingCustomer); // reutilizamos createCustomer para guardar
+            Customer saved = customerService.createCustomer(existingCustomer);
             return ResponseEntity.ok(saved);
         } else {
             return ResponseEntity.notFound().build();
@@ -64,8 +80,9 @@ public class CustomerController {
         try {
             Customer patch = customerService.patchCustomer(id, customer);
             return ResponseEntity.ok(patch);
-        }catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No existe el producto con el id " + customer.getCustomerId());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("No existe el cliente con el id " + id);
         }
     }
 
