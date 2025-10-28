@@ -2,6 +2,10 @@ package com.techgroup.techcop.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "products")
@@ -25,16 +29,26 @@ public class Products {
     @Column(name = "product_stock")
     private Integer stock;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+
     public Products() {
 
     }
 
-    public Products(Integer product_id, String productName, String description, Double price, Integer stock) {
+    public Products(Integer product_id, String productName, String description, Double price, Integer stock, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.product_id = product_id;
         this.productName = productName;
         this.description = description;
         this.price = price;
         this.stock = stock;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public Integer getId() {
@@ -77,4 +91,27 @@ public class Products {
         this.price = price;
     }
 
+    public Integer getProduct_id() {
+        return product_id;
+    }
+
+    public void setProduct_id(Integer product_id) {
+        this.product_id = product_id;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

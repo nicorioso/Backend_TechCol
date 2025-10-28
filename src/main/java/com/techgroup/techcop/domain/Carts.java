@@ -2,6 +2,8 @@ package com.techgroup.techcop.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -19,8 +21,13 @@ public class Carts {
     @Column(name = "cart_price")
     private Double cart_price;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
     private LocalDateTime create_at;
+
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
     @OneToOne
     @JoinColumn(name = "customer_id")
@@ -32,10 +39,11 @@ public class Carts {
 
     public Carts() {}
 
-    public Carts(Integer cart_id, Double cart_price, LocalDateTime create_at, Customer customer, List<CartItem> items) {
+    public Carts(Integer cart_id, Double cart_price, LocalDateTime create_at, LocalDateTime updatedAt, Customer customer, List<CartItem> items) {
         this.cart_id = cart_id;
         this.cart_price = cart_price;
         this.create_at = create_at;
+        this.updatedAt = updatedAt;
         this.customer = customer;
         this.items = items;
     }
@@ -78,5 +86,13 @@ public class Carts {
 
     public void setItems(List<CartItem> items) {
         this.items = items;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

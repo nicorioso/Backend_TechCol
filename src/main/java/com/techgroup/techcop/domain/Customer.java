@@ -1,6 +1,10 @@
 package com.techgroup.techcop.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "customers")
@@ -29,6 +33,14 @@ public class Customer {
     @Column(name = "role_id")
     private Integer roleId;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
+
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private Carts cart;
 
@@ -36,7 +48,7 @@ public class Customer {
 
     }
 
-    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Integer roleId) {
+    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Integer roleId, LocalDateTime createdAt, LocalDateTime updatedAt, Carts cart) {
         this.customerId = customerId;
         this.customerName = customerName;
         this.customerLastName = customerLastName;
@@ -44,6 +56,9 @@ public class Customer {
         this.customerPassword = customerPassword;
         this.customerPhoneNumber = customerPhoneNumber;
         this.roleId = roleId;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.cart = cart;
     }
 
     public Integer getCustomerId() {
@@ -108,5 +123,21 @@ public class Customer {
 
     public void setCart(Carts cart) {
         this.cart = cart;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }
