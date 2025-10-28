@@ -9,20 +9,20 @@ public class Products {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "productId")
+    @Column(name = "product_id")
     private Integer product_id;
 
-    @Column(name = "productName")
-    @JsonProperty("productName")
+    @Column(name = "product_name")
+    @JsonProperty("product_name")
     private String productName;
 
-    @Column(name = "productDescription")
+    @Column(name = "product_description")
     private String description;
 
-    @Column(name = "productPrice")
+    @Column(name = "product_price")
     private Double price;
 
-    @Column(name = "productStock")
+    @Column(name = "product_stock")
     private Integer stock;
 
     public Products() {

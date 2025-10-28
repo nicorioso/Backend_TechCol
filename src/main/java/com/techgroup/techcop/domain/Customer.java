@@ -8,25 +8,25 @@ public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "customerId")
+    @Column(name = "customer_id")
     private Integer customerId;
 
-    @Column(name = "customerName")
+    @Column(name = "customer_name")
     private String customerName;
 
-    @Column(name = "customerLastName")
+    @Column(name = "customer_last_name")
     private String customerLastName;
 
-    @Column(name = "customerEmail")
+    @Column(name = "customer_email")
     private String customerEmail;
 
-    @Column(name = "customerPassword")
+    @Column(name = "customer_password")
     private String customerPassword;
 
-    @Column(name = "customerPhoneNumber")
+    @Column(name = "customer_phone_number")
     private String customerPhoneNumber;
 
-    @Column(name = "roleId")
+    @Column(name = "role_id")
     private Integer roleId;
 
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)

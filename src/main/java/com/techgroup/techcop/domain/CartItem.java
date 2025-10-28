@@ -8,21 +8,21 @@ import jakarta.persistence.*;
 public class CartItem {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "cartDetailId")
+    @Column(name = "cart_detail_id")
     private Integer cart_item_id;
 
     @Column(name = "quantity")
     private Integer quantity;
 
-    @Column(name = "unitprice")
+    @Column(name = "unit_price")
     private Double unit_price;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cartId", nullable = false)
+    @JoinColumn(name = "cart_id", nullable = false)
     @JsonIgnore
     private Carts cart;
 
-    @Column(name = "productId")
+    @Column(name = "product_id")
     private Integer product_id;
 
     public CartItem() {}

@@ -43,7 +43,7 @@ public class CustomerServiceImpl implements CustomerService{
         Carts cart = new Carts();
         cart.setCustomer(customer);
         cart.setCart_price(0.0);
-        cart.setCreate_at(LocalDateTime.now().toString());
+        cart.setCreate_at(LocalDateTime.now());
 
         cartsDBA.save(cart);
 

@@ -3,6 +3,7 @@ package com.techgroup.techcop.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,17 +13,17 @@ public class Carts {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "cartId")
+    @Column(name = "cart_Id")
     private Integer cart_id;
 
-    @Column(name = "cartPrice")
+    @Column(name = "cart_price")
     private Double cart_price;
 
-    @Column(name = "createdAt")
-    private String create_at;
+    @Column(name = "created_at")
+    private LocalDateTime create_at;
 
     @OneToOne
-    @JoinColumn(name = "customerId")
+    @JoinColumn(name = "customer_id")
     @JsonIgnore
     private Customer customer;
 
@@ -31,7 +32,7 @@ public class Carts {
 
     public Carts() {}
 
-    public Carts(Integer cart_id, Double cart_price, String create_at, Customer customer, List<CartItem> items) {
+    public Carts(Integer cart_id, Double cart_price, LocalDateTime create_at, Customer customer, List<CartItem> items) {
         this.cart_id = cart_id;
         this.cart_price = cart_price;
         this.create_at = create_at;
@@ -55,11 +56,11 @@ public class Carts {
         this.cart_price = cart_price;
     }
 
-    public String getCreate_at() {
+    public LocalDateTime getCreate_at() {
         return create_at;
     }
 
-    public void setCreate_at(String create_at) {
+    public void setCreate_at(LocalDateTime create_at) {
         this.create_at = create_at;
     }
 
