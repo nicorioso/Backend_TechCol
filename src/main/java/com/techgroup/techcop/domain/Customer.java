@@ -1,6 +1,10 @@
 package com.techgroup.techcop.domain;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "customers")
@@ -8,26 +12,34 @@ public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "customerId")
+    @Column(name = "customer_id")
     private Integer customerId;
 
-    @Column(name = "customerName")
+    @Column(name = "customer_name")
     private String customerName;
 
-    @Column(name = "customerLastName")
+    @Column(name = "customer_last_name")
     private String customerLastName;
 
-    @Column(name = "customerEmail")
+    @Column(name = "customer_email")
     private String customerEmail;
 
-    @Column(name = "customerPassword")
+    @Column(name = "customer_password")
     private String customerPassword;
 
-    @Column(name = "customerPhoneNumber")
+    @Column(name = "customer_phone_number")
     private String customerPhoneNumber;
 
-    @Column(name = "roleId")
+    @Column(name = "role_id")
     private Integer roleId;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private Carts cart;
@@ -36,7 +48,7 @@ public class Customer {
 
     }
 
-    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Integer roleId) {
+    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Integer roleId, LocalDateTime createdAt, LocalDateTime updatedAt, Carts cart) {
         this.customerId = customerId;
         this.customerName = customerName;
         this.customerLastName = customerLastName;
@@ -44,6 +56,9 @@ public class Customer {
         this.customerPassword = customerPassword;
         this.customerPhoneNumber = customerPhoneNumber;
         this.roleId = roleId;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.cart = cart;
     }
 
     public Integer getCustomerId() {
@@ -109,4 +124,24 @@ public class Customer {
     public void setCart(Carts cart) {
         this.cart = cart;
     }
+<<<<<<< HEAD
 }
+=======
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+}
+>>>>>>> 5d0de4a502e7753643de61ee9347d9a65a82f008
