@@ -1,4 +1,4 @@
-package com.TechGroup.TechCop;
+package com.techgroup.techcop;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

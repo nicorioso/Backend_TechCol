@@ -1,45 +1,34 @@
-package com.techgroup.techcop.domain;
+package com.TechGroup.TechCop.domain;
 
+import com.techgroup.techcop.domain.Carts;
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "customers")
+@Table(name = "Customer")
 public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "customer_id")
+    @Column(name = "customerId")
     private Integer customerId;
 
-    @Column(name = "customer_name")
+    @Column(name = "customerName")
     private String customerName;
 
-    @Column(name = "customer_last_name")
+    @Column(name = "customerLastName")
     private String customerLastName;
 
-    @Column(name = "customer_email")
+    @Column(name = "customerEmail")
     private String customerEmail;
 
-    @Column(name = "customer_password")
+    @Column(name = "customerPassword")
     private String customerPassword;
 
-    @Column(name = "customer_phone_number")
+    @Column(name = "customerPhoneNumber")
     private String customerPhoneNumber;
 
-    @Column(name = "role_id")
+    @Column(name = "roleId")
     private Integer roleId;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 
     @OneToOne(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private Carts cart;
@@ -48,7 +37,7 @@ public class Customer {
 
     }
 
-    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Integer roleId, LocalDateTime createdAt, LocalDateTime updatedAt, Carts cart) {
+    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Integer roleId) {
         this.customerId = customerId;
         this.customerName = customerName;
         this.customerLastName = customerLastName;
@@ -56,9 +45,6 @@ public class Customer {
         this.customerPassword = customerPassword;
         this.customerPhoneNumber = customerPhoneNumber;
         this.roleId = roleId;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.cart = cart;
     }
 
     public Integer getCustomerId() {
@@ -123,21 +109,5 @@ public class Customer {
 
     public void setCart(Carts cart) {
         this.cart = cart;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 }
