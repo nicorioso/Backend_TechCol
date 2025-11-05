@@ -1,6 +1,7 @@
 package com.techgroup.techcop.controllers;
 
 import com.techgroup.techcop.domain.Customer;
+import com.techgroup.techcop.domain.LoginRequest;
 import com.techgroup.techcop.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,8 +20,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam String email, @RequestParam String password) {
-        String token = authService.login(email, password);
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        String token = authService.login(request.getUsername(), request.getPassword());
         return ResponseEntity.ok(token);
     }
 }
