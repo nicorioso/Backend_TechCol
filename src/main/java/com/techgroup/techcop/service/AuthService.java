@@ -3,6 +3,7 @@ package com.techgroup.techcop.service;
 import com.techgroup.techcop.domain.Customer;
 import com.techgroup.techcop.repository.CustomerDBA;
 import com.techgroup.techcop.security.jwt.JwtService;
+import com.techgroup.techcop.security.model.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -25,9 +26,15 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     public String login(String email, String password) {
+
         authManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
-        UserDetails user = (UserDetails) customerDBA.findByCustomerEmail(email).get();
-        return jwtService.generateToken(user);
+
+        Customer customer = (Customer) customerDBA.findByCustomerEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        CustomUserDetails userDetails = new CustomUserDetails(customer);
+
+        return jwtService.generateToken(userDetails);
     }
 
     public Customer register(Customer customer) {
@@ -35,4 +42,5 @@ public class AuthService {
         return customerDBA.save(customer);
     }
 }
+
 
