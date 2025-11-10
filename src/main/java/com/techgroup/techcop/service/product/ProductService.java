@@ -1,6 +1,6 @@
-package com.techgroup.techcop.service;
+package com.techgroup.techcop.service.product;
 
-import com.techgroup.techcop.domain.Products;
+import com.techgroup.techcop.model.entity.Products;
 import java.util.List;
 import java.util.Optional;
 

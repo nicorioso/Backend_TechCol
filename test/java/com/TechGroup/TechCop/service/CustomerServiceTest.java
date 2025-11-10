@@ -1,6 +1,6 @@
 package com.techgroup.techcop.service;
 
-import com.techgroup.techcop.domain.Customer;
+import com.techgroup.techcop.model.Customer;
 
 import java.util.List;
 import java.util.Optional;

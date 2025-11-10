@@ -1,6 +1,6 @@
 package com.techgroup.techcop.controllers;
 
-import com.techgroup.techcop.domain.Customer;
+import com.techgroup.techcop.model.Customer;
 import com.techgroup.techcop.service.CustomerServiceTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

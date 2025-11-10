@@ -1,4 +1,4 @@
-package com.techgroup.techcop.domain;
+package com.techgroup.techcop.model.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;

@@ -1,6 +1,6 @@
 package com.TechGroup.TechCop.domain;
 
-import com.techgroup.techcop.domain.Carts;
+import com.techgroup.techcop.model.Carts;
 import jakarta.persistence.*;
 
 @Entity

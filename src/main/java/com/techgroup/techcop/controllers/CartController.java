@@ -1,8 +1,8 @@
 package com.techgroup.techcop.controllers;
 
-import com.techgroup.techcop.domain.Carts;
-import com.techgroup.techcop.domain.CartItem;
-import com.techgroup.techcop.service.CartService;
+import com.techgroup.techcop.model.entity.Carts;
+import com.techgroup.techcop.model.entity.CartItem;
+import com.techgroup.techcop.service.cart.CartService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -1,8 +1,8 @@
-package com.techgroup.techcop.service;
+package com.techgroup.techcop.service.product;
 
 
-import com.techgroup.techcop.domain.Products;
-import com.techgroup.techcop.repository.ProductsDBA;
+import com.techgroup.techcop.model.entity.Products;
+import com.techgroup.techcop.repository.ProductsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -12,16 +12,16 @@ import java.util.Optional;
 public class ProductServiceImpl implements ProductService {
 
     @Autowired
-    private ProductsDBA productsDBA;
+    private ProductsRepository productsRepository;
 
     @Override
     public List<Products> getProducts() {
-        return productsDBA.findAll();
+        return productsRepository.findAll();
     }
 
     @Override
     public Optional<Products> getProduct(int id) {
-        Optional<Products> product = productsDBA.findById(id);
+        Optional<Products> product = productsRepository.findById(id);
         if (product.isPresent()) {
             return product;
         }
@@ -32,30 +32,30 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Products addProduct(Products products) {
-        return productsDBA.save(products);
+        return productsRepository.save(products);
     }
 
     @Override
     public Products updateProduct(int id, Products productsNew) {
-        Products productsExist = productsDBA.findById(id)
+        Products productsExist = productsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
         productsExist.setProductName(productsNew.getProductName());
         productsExist.setDescription(productsNew.getDescription());
         productsExist.setStock(productsNew.getStock());
         productsExist.setPrice(productsNew.getPrice());
-        return productsDBA.save(productsExist);
+        return productsRepository.save(productsExist);
     }
 
     @Override
     public void deleteProduct(int id) {
-        Products products = productsDBA.findById(id)
+        Products products = productsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
-        productsDBA.delete(products);
+        productsRepository.delete(products);
     }
 
     @Override
     public Products patchProduct(int id, Products products) {
-        Products productsExist = productsDBA.findById(id)
+        Products productsExist = productsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
         if (products.getProductName() != null) {
             productsExist.setProductName(products.getProductName());
@@ -69,7 +69,7 @@ public class ProductServiceImpl implements ProductService {
         if (products.getPrice() != null) {
             productsExist.setPrice(products.getPrice());
         }
-        return productsDBA.save(productsExist);
+        return productsRepository.save(productsExist);
     }
 
 }

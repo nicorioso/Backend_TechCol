@@ -1,8 +1,8 @@
 package com.techgroup.techcop.controllers;
 
-import com.techgroup.techcop.domain.Customer;
-import com.techgroup.techcop.domain.LoginRequest;
-import com.techgroup.techcop.service.AuthService;
+import com.techgroup.techcop.model.entity.Customer;
+import com.techgroup.techcop.model.dto.LoginRequest;
+import com.techgroup.techcop.service.auth.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

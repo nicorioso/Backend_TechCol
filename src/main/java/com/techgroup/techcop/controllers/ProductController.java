@@ -1,7 +1,7 @@
 package com.techgroup.techcop.controllers;
 
-import com.techgroup.techcop.domain.Products;
-import com.techgroup.techcop.service.ProductService;
+import com.techgroup.techcop.model.entity.Products;
+import com.techgroup.techcop.service.product.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -1,13 +1,11 @@
-package com.techgroup.techcop.service;
+package com.techgroup.techcop.service.auth;
 
-import com.techgroup.techcop.domain.Customer;
-import com.techgroup.techcop.repository.CustomerDBA;
+import com.techgroup.techcop.model.entity.Customer;
+import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.security.jwt.JwtService;
 import com.techgroup.techcop.security.model.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.*;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +13,7 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     @Autowired
-    private CustomerDBA customerDBA;
+    private CustomerRepository customerRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -30,7 +28,7 @@ public class AuthService {
 
         authManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
 
-        Customer customer = (Customer) customerDBA.findByCustomerEmail(email)
+        Customer customer = (Customer) customerRepository.findByCustomerEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         CustomUserDetails userDetails = new CustomUserDetails(customer);
@@ -40,7 +38,7 @@ public class AuthService {
 
     public Customer register(Customer customer) {
         customer.setCustomerPassword(passwordEncoder.encode(customer.getCustomerPassword()));
-        return customerDBA.save(customer);
+        return customerRepository.save(customer);
     }
 }
 

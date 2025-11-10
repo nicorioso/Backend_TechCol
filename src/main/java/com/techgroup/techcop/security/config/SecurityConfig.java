@@ -1,4 +1,4 @@
-package com.techgroup.techcop.security;
+package com.techgroup.techcop.security.config;
 
 import com.techgroup.techcop.security.jwt.JwtAuthenticationFilter;
 import com.techgroup.techcop.security.model.CustomUserDetailsService;

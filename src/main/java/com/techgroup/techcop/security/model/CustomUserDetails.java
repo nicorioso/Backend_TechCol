@@ -1,6 +1,6 @@
 package com.techgroup.techcop.security.model;
 
-import com.techgroup.techcop.domain.Customer;
+import com.techgroup.techcop.model.entity.Customer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;

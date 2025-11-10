@@ -1,17 +1,16 @@
-package com.techgroup.techcop.service;
+package com.techgroup.techcop.service.cart;
 
-import com.techgroup.techcop.domain.CartItem;
-import com.techgroup.techcop.domain.Carts;
-import com.techgroup.techcop.domain.Customer;
-import com.techgroup.techcop.domain.Products;
-import com.techgroup.techcop.repository.CartDetailsDBA;
-import com.techgroup.techcop.repository.CartsDBA;
-import com.techgroup.techcop.repository.CustomerDBA;
-import com.techgroup.techcop.repository.ProductsDBA;
+import com.techgroup.techcop.model.entity.CartItem;
+import com.techgroup.techcop.model.entity.Carts;
+import com.techgroup.techcop.model.entity.Customer;
+import com.techgroup.techcop.model.entity.Products;
+import com.techgroup.techcop.repository.CartDetailsRepository;
+import com.techgroup.techcop.repository.CartsRepository;
+import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.repository.ProductsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,17 +18,17 @@ import java.util.Optional;
 public class CartServiceImpl implements CartService {
 
     @Autowired
-    public CartsDBA cartsDBA;
+    public CartsRepository cartsRepository;
     @Autowired
-    private CustomerDBA customerDBA;
+    private CustomerRepository customerRepository;
     @Autowired
-    private CartDetailsDBA cartDetailsDBA;
+    private CartDetailsRepository cartDetailsRepository;
     @Autowired
-    private ProductsDBA productsDBA;
+    private ProductsRepository productsRepository;
 
     @Override
     public List<CartItem> getCartItems(Integer customerId) {
-        Customer customer = customerDBA.findById(customerId)
+        Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
         Carts cart = customer.getCart();
@@ -41,7 +40,7 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public Carts postCartItem(CartItem cartItem, Integer customerId) {
-        Customer customer = customerDBA.findById(customerId)
+        Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
         Carts cart = customer.getCart();
@@ -68,23 +67,23 @@ public class CartServiceImpl implements CartService {
             cart.getItems().add(newItem);
         }
 
-        return cartsDBA.save(cart);
+        return cartsRepository.save(cart);
     }
 
 
     @Override
     public void deleteCartItem(Integer CartItemId, Integer customerId) {
-        Customer customer = customerDBA.findById(customerId).orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+        Customer customer = customerRepository.findById(customerId).orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
         Carts cart = customer.getCart();
 
-        CartItem Item = cartDetailsDBA.findById(CartItemId).orElseThrow(() -> new RuntimeException("CartItem no encontrado"));
-        Products products = productsDBA.findById(Item.getProduct_id()).orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        CartItem Item = cartDetailsRepository.findById(CartItemId).orElseThrow(() -> new RuntimeException("CartItem no encontrado"));
+        Products products = productsRepository.findById(Item.getProduct_id()).orElseThrow(() -> new RuntimeException("Producto no encontrado"));
         if (Item.getQuantity() > 1) {
             Item.setQuantity(Item.getQuantity() - 1);
             Item.setUnit_price(products.getPrice() * Item.getQuantity());
-            cartDetailsDBA.save(Item);
+            cartDetailsRepository.save(Item);
         }else {
-            cartDetailsDBA.delete(Item);
+            cartDetailsRepository.delete(Item);
         }
 
         double total = cart.getItems().stream()
@@ -92,18 +91,7 @@ public class CartServiceImpl implements CartService {
                 .sum();
         cart.setCart_price(total);
 
-        cartsDBA.save(cart);
+        cartsRepository.save(cart);
 
-//        Carts cart = cartsDBA.findById(cartId)
-//                .orElseThrow(() -> new RuntimeException("No existe el carrito con id: " + cartId));
-//        if (cart.getAmount() > 1) {
-//            cart.setAmount(cart.getAmount() - 1);
-//            Products products = productsDBA.findById(cart.getProduct_id())
-//                    .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + cart.getProduct_id()));
-//            cart.setCart_price(cart.getCart_price() - products.getPrice());
-//            cartsDBA.save(cart);
-//        } else {
-//            cartsDBA.deleteById(cartId);
-//        }
     }
 }
