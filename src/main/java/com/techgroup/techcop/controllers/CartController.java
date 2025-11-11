@@ -14,8 +14,11 @@ import java.util.List;
 @RequestMapping("/Cart")
 public class CartController {
 
-    @Autowired
-    private CartService cartService;
+    private final CartService cartService;
+
+    public CartController(CartService cartService) {
+        this.cartService = cartService;
+    }
 
     @GetMapping("/{customerId}")
     public ResponseEntity<List<CartItem>> getCartService(@PathVariable Integer customerId) {
