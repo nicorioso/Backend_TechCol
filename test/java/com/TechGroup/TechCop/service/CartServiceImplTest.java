@@ -1,9 +1,9 @@
 package com.techgroup.techcop.service;
 
-import com.techgroup.techcop.domain.CartItem;
-import com.techgroup.techcop.domain.Carts;
-import com.techgroup.techcop.domain.Customer;
-import com.techgroup.techcop.domain.Products;
+import com.techgroup.techcop.model.CartItem;
+import com.techgroup.techcop.model.Carts;
+import com.techgroup.techcop.model.Customer;
+import com.techgroup.techcop.model.Products;
 import com.techgroup.techcop.repository.CartsDBA;
 import com.techgroup.techcop.repository.CustomerDBA;
 import com.techgroup.techcop.repository.ProductsDBA;

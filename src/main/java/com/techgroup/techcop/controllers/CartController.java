@@ -1,8 +1,8 @@
 package com.techgroup.techcop.controllers;
 
-import com.techgroup.techcop.domain.Carts;
-import com.techgroup.techcop.domain.CartItem;
-import com.techgroup.techcop.service.CartService;
+import com.techgroup.techcop.model.entity.Carts;
+import com.techgroup.techcop.model.entity.CartItem;
+import com.techgroup.techcop.service.cart.CartService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,8 +14,11 @@ import java.util.List;
 @RequestMapping("/Cart")
 public class CartController {
 
-    @Autowired
-    private CartService cartService;
+    private final CartService cartService;
+
+    public CartController(CartService cartService) {
+        this.cartService = cartService;
+    }
 
     @GetMapping("/{customerId}")
     public ResponseEntity<List<CartItem>> getCartService(@PathVariable Integer customerId) {

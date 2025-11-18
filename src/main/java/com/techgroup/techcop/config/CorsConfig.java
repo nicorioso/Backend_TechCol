@@ -1,4 +1,4 @@
-package com.techgroup.techcop;
+package com.techgroup.techcop.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

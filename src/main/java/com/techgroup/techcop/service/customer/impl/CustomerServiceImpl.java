@@ -1,10 +1,11 @@
-package com.techgroup.techcop.service;
+package com.techgroup.techcop.service.customer.impl;
 
 
-import com.techgroup.techcop.domain.Carts;
-import com.techgroup.techcop.domain.Customer;
-import com.techgroup.techcop.repository.CartsDBA;
-import com.techgroup.techcop.repository.CustomerDBA;
+import com.techgroup.techcop.model.entity.Carts;
+import com.techgroup.techcop.model.entity.Customer;
+import com.techgroup.techcop.repository.CartsRepository;
+import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.service.customer.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,22 +14,24 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class CustomerServiceImpl implements CustomerService{
+public class CustomerServiceImpl implements CustomerService {
 
-    @Autowired
-    private CustomerDBA customerDBA;
+    private final CustomerRepository customerRepository;
+    private final CartsRepository cartsRepository;
 
-    @Autowired
-    private CartsDBA cartsDBA;
+    public CustomerServiceImpl(CustomerRepository customerRepository, CartsRepository cartsRepository) {
+        this.customerRepository = customerRepository;
+        this.cartsRepository = cartsRepository;
+    }
 
     @Override
     public List<Customer> getCustomer() {
-        return customerDBA.findAll();
+        return customerRepository.findAll();
     }
 
     @Override
     public Optional<Customer> getCustomerById(Integer id) {
-        Optional<Customer> customer = customerDBA.findById(id);
+        Optional<Customer> customer = customerRepository.findById(id);
         if (customer.isPresent()) {
             return customer;
         }else {
@@ -37,35 +40,21 @@ public class CustomerServiceImpl implements CustomerService{
     }
 
     @Override
-    public Customer createCustomer(Customer customer) {
-        customerDBA.save(customer);
-
-        Carts cart = new Carts();
-        cart.setCustomer(customer);
-        cart.setCart_price(0.0);
-        cart.setCreate_at(LocalDateTime.now());
-
-        cartsDBA.save(cart);
-
-        return customer;
-    }
-
-    @Override
     public Customer updateCustomer(Integer id, Customer customer) {
-        return customerDBA.findById(id).map(existing -> {
+        return customerRepository.findById(id).map(existing -> {
             existing.setCustomerName(customer.getCustomerName());
             existing.setCustomerLastName(customer.getCustomerLastName());
             existing.setCustomerEmail(customer.getCustomerEmail());
             existing.setCustomerPassword(customer.getCustomerPassword());
             existing.setCustomerPhoneNumber(customer.getCustomerPhoneNumber());
             existing.setRoleId(customer.getRoleId());
-            return customerDBA.save(existing);
+            return customerRepository.save(existing);
         }).orElseThrow(() -> new RuntimeException("Cliente no encontrado con id: " + id));
     }
 
     @Override
     public Customer patchCustomer(Integer id, Customer customer) {
-        Customer customerExist = customerDBA.findById(id)
+        Customer customerExist = customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
         if (customer.getCustomerName() != null) {
             customerExist.setCustomerName(customer.getCustomerName());
@@ -85,10 +74,10 @@ public class CustomerServiceImpl implements CustomerService{
         if (customer.getRoleId() != null) {
             customerExist.setRoleId(customer.getRoleId());
         }
-        return customerDBA.save(customerExist);
+        return customerRepository.save(customerExist);
     }
 
     public void deleteCustomer(Integer id) {
-        customerDBA.deleteById(id);
+        customerRepository.deleteById(id);
     }
 }

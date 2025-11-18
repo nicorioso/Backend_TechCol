@@ -1,4 +1,4 @@
-package com.techgroup.techcop.domain;
+package com.techgroup.techcop.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;

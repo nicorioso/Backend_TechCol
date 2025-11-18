@@ -1,10 +1,9 @@
-package com.techgroup.techcop.service;
+package com.techgroup.techcop.service.cart;
 
-import com.techgroup.techcop.domain.Carts;
-import com.techgroup.techcop.domain.CartItem;
+import com.techgroup.techcop.model.entity.Carts;
+import com.techgroup.techcop.model.entity.CartItem;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface CartService {
 

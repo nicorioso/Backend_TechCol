@@ -1,7 +1,7 @@
 package com.techgroup.techcop.service;
 
 
-import com.techgroup.techcop.domain.Customer;
+import com.techgroup.techcop.model.Customer;
 import com.techgroup.techcop.repository.CustomerDBA;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

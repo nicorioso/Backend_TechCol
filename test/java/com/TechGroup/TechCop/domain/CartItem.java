@@ -1,4 +1,4 @@
-package com.techgroup.techcop.domain;
+package com.techgroup.techcop.model;
 
 public class CartItem {
     private Integer cartsId;
