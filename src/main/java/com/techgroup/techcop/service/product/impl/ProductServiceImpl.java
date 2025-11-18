@@ -12,8 +12,11 @@ import java.util.Optional;
 @Service
 public class ProductServiceImpl implements ProductService {
 
-    @Autowired
-    private ProductsRepository productsRepository;
+    private final ProductsRepository productsRepository;
+
+    public ProductServiceImpl(ProductsRepository productsRepository) {
+        this.productsRepository = productsRepository;
+    }
 
     @Override
     public List<Products> getProducts() {
