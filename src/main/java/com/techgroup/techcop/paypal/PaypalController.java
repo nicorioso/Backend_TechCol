@@ -18,11 +18,6 @@ public class PaypalController {
 
     private final PaypalService paypalService;
 
-    @GetMapping("/")
-    public String home() {
-        return "test";
-    }
-
     @PostMapping("/payment/create")
     public RedirectView createPayment (
             @RequestParam("method") String method,
