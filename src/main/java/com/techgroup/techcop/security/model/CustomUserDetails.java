@@ -45,4 +45,16 @@ public class CustomUserDetails implements UserDetails {
     public Customer getCustomer() {
         return customer;
     }
+
+    public String getName() {
+        return customer.getCustomerName();
+    }
+
+    public Integer getRole() {
+        return customer.getRoleId();
+    }
+
+    public Integer getId() {
+        return customer.getCustomerId();
+    }
 }

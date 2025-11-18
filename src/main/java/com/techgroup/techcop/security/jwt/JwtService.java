@@ -1,5 +1,6 @@
 package com.techgroup.techcop.security.jwt;
 
+import com.techgroup.techcop.security.model.CustomUserDetails;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -7,6 +8,8 @@ import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class JwtService {
@@ -17,11 +20,17 @@ public class JwtService {
         return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
     }
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(CustomUserDetails userDetails) {
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("name", userDetails.getName());
+        claims.put("role", userDetails.getRole());
+
         return Jwts.builder()
-                .setSubject(userDetails.getUsername()) // normalmente el email
+                .setClaims(claims)
+                .setSubject(String.valueOf(userDetails.getId()))
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 horas
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
