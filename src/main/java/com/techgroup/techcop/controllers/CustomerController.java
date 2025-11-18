@@ -15,8 +15,11 @@ import java.util.Optional;
 @CrossOrigin(origins = "http://localhost:5173")
 public class CustomerController {
 
-    @Autowired
-    private CustomerService customerService;
+    private final CustomerService customerService;
+
+    public CustomerController(CustomerService customerService) {
+        this.customerService = customerService;
+    }
 
     @GetMapping
     public ResponseEntity<?> getAllCustomers() {
@@ -32,31 +35,10 @@ public class CustomerController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @PostMapping
-    public ResponseEntity<?> postCustomer(@RequestBody Customer customer) {
-        Customer nuevo = customerService.createCustomer(customer);
-        URI location = URI.create("/Customer/" + nuevo.getCustomerId());
-        return ResponseEntity.created(location).body(nuevo);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateCustomer(@PathVariable Integer id, @RequestBody Customer updatedCustomer) {
-        Optional<Customer> customerOpt = customerService.getCustomerById(id);
-        if (customerOpt.isPresent()) {
-            Customer existingCustomer = customerOpt.get();
-            existingCustomer.setCustomerName(updatedCustomer.getCustomerName());
-            existingCustomer.setCustomerLastName(updatedCustomer.getCustomerLastName());
-            existingCustomer.setCustomerEmail(updatedCustomer.getCustomerEmail());
-            existingCustomer.setCustomerPassword(updatedCustomer.getCustomerPassword());
-            existingCustomer.setCustomerPhoneNumber(updatedCustomer.getCustomerPhoneNumber());
-            existingCustomer.setRoleId(updatedCustomer.getRoleId());
-            // Agrega más campos si los tienes en tu entidad
-
-            Customer saved = customerService.createCustomer(existingCustomer); // reutilizamos createCustomer para guardar
-            return ResponseEntity.ok(saved);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    @PutMapping
+    public ResponseEntity<?> updateCustomer(@RequestBody Customer updatedCustomer) {
+        Customer saved = customerService.updateCustomer(updatedCustomer.getCustomerId(), updatedCustomer);
+        return ResponseEntity.ok(saved);
     }
 
     @PatchMapping("/{id}")

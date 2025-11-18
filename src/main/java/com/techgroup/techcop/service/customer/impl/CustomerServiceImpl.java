@@ -1,10 +1,11 @@
-package com.techgroup.techcop.service.customer;
+package com.techgroup.techcop.service.customer.impl;
 
 
 import com.techgroup.techcop.model.entity.Carts;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CartsRepository;
 import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.service.customer.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,11 +16,13 @@ import java.util.Optional;
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
+    private final CartsRepository cartsRepository;
 
-    @Autowired
-    private CartsRepository cartsRepository;
+    public CustomerServiceImpl(CustomerRepository customerRepository, CartsRepository cartsRepository) {
+        this.customerRepository = customerRepository;
+        this.cartsRepository = cartsRepository;
+    }
 
     @Override
     public List<Customer> getCustomer() {
@@ -34,20 +37,6 @@ public class CustomerServiceImpl implements CustomerService {
         }else {
             return Optional.empty();
         }
-    }
-
-    @Override
-    public Customer createCustomer(Customer customer) {
-        customerRepository.save(customer);
-
-        Carts cart = new Carts();
-        cart.setCustomer(customer);
-        cart.setCart_price(0.0);
-        cart.setCreate_at(LocalDateTime.now());
-
-        cartsRepository.save(cart);
-
-        return customer;
     }
 
     @Override

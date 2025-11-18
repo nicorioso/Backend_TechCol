@@ -1,8 +1,9 @@
-package com.techgroup.techcop.service.product;
+package com.techgroup.techcop.service.product.impl;
 
 
 import com.techgroup.techcop.model.entity.Products;
 import com.techgroup.techcop.repository.ProductsRepository;
+import com.techgroup.techcop.service.product.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
