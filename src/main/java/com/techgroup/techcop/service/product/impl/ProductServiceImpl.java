@@ -43,10 +43,6 @@ public class ProductServiceImpl implements ProductService {
     public Products updateProduct(int id, Products productsNew) {
         Products productsExist = productsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
-        productsExist.setProductName(productsNew.getProductName());
-        productsExist.setDescription(productsNew.getDescription());
-        productsExist.setStock(productsNew.getStock());
-        productsExist.setPrice(productsNew.getPrice());
         return productsRepository.save(productsExist);
     }
 
@@ -55,25 +51,6 @@ public class ProductServiceImpl implements ProductService {
         Products products = productsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
         productsRepository.delete(products);
-    }
-
-    @Override
-    public Products patchProduct(int id, Products products) {
-        Products productsExist = productsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
-        if (products.getProductName() != null) {
-            productsExist.setProductName(products.getProductName());
-        }
-        if (products.getDescription() != null) {
-            productsExist.setDescription(products.getDescription());
-        }
-        if (products.getStock() != null) {
-            productsExist.setStock(products.getStock());
-        }
-        if (products.getPrice() != null) {
-            productsExist.setPrice(products.getPrice());
-        }
-        return productsRepository.save(productsExist);
     }
 
 }
