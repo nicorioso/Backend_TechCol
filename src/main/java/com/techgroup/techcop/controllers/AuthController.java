@@ -5,6 +5,8 @@ import com.techgroup.techcop.model.dto.LoginRequest;
 import com.techgroup.techcop.service.auth.AuthenticationService;
 import com.techgroup.techcop.service.auth.RegistrationService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

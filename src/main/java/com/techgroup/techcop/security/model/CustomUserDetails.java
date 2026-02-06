@@ -2,9 +2,10 @@ package com.techgroup.techcop.security.model;
 
 import com.techgroup.techcop.model.entity.Customer;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 public class CustomUserDetails implements UserDetails {
 
@@ -16,8 +17,9 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Si manejas roles, puedes mapearlos aquí
-        return Collections.emptyList();
+        return List.of(
+                new SimpleGrantedAuthority(customer.getRole().getRoleName())
+        );
     }
 
     @Override

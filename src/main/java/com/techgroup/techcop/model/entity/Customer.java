@@ -30,8 +30,9 @@ public class Customer {
     @Column(name = "customer_phone_number")
     private String customerPhoneNumber;
 
-    @Column(name = "role_id")
-    private Integer roleId;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
@@ -48,14 +49,14 @@ public class Customer {
 
     }
 
-    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Integer roleId, LocalDateTime createdAt, LocalDateTime updatedAt, Carts cart) {
+    public Customer(Integer customerId, String customerName, String customerLastName, String customerEmail, String customerPassword, String customerPhoneNumber, Role role, LocalDateTime createdAt, LocalDateTime updatedAt, Carts cart) {
         this.customerId = customerId;
         this.customerName = customerName;
         this.customerLastName = customerLastName;
         this.customerEmail = customerEmail;
         this.customerPassword = customerPassword;
         this.customerPhoneNumber = customerPhoneNumber;
-        this.roleId = roleId;
+        this.role = role;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.cart = cart;
@@ -109,12 +110,12 @@ public class Customer {
         this.customerPhoneNumber = customerPhoneNumber;
     }
 
-    public Integer getRoleId() {
-        return roleId;
+    public Role getRole() {
+        return role;
     }
 
-    public void setRoleId(Integer roleId) {
-        this.roleId = roleId;
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public Carts getCart() {

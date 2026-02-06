@@ -5,6 +5,7 @@ import com.techgroup.techcop.service.customer.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -20,11 +21,13 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<?> getAllCustomers() {
         return ResponseEntity.ok(customerService.getCustomer());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<?> getCustomerById(@PathVariable Integer id) {
         Optional<Customer> customerOpt = customerService.getCustomerById(id);
@@ -33,12 +36,14 @@ public class CustomerController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENTE')")
     @PutMapping
     public ResponseEntity<?> updateCustomer(@RequestBody Customer updatedCustomer) {
         Customer saved = customerService.updateCustomer(updatedCustomer.getCustomerId(), updatedCustomer);
         return ResponseEntity.ok(saved);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENTE')")
     @PatchMapping("/{id}")
     public ResponseEntity<?> patchCustomer(@PathVariable Integer id, @RequestBody Customer customer) {
         try {
@@ -50,6 +55,7 @@ public class CustomerController {
         }
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'CLIENTE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCustomer(@PathVariable Integer id) {
         Optional<Customer> customerOpt = customerService.getCustomerById(id);

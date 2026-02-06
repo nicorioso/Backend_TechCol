@@ -47,7 +47,7 @@ public class CustomerServiceImpl implements CustomerService {
             existing.setCustomerEmail(customer.getCustomerEmail());
             existing.setCustomerPassword(customer.getCustomerPassword());
             existing.setCustomerPhoneNumber(customer.getCustomerPhoneNumber());
-            existing.setRoleId(customer.getRoleId());
+            existing.setRole(customer.getRole());
             return customerRepository.save(existing);
         }).orElseThrow(() -> new RuntimeException("Cliente no encontrado con id: " + id));
     }
@@ -71,8 +71,8 @@ public class CustomerServiceImpl implements CustomerService {
         if (customer.getCustomerPhoneNumber() != null) {
             customerExist.setCustomerPhoneNumber(customer.getCustomerPhoneNumber());
         }
-        if (customer.getRoleId() != null) {
-            customerExist.setRoleId(customer.getRoleId());
+        if (customer.getRole() != null) {
+            customerExist.setRole(customer.getRole());
         }
         return customerRepository.save(customerExist);
     }

@@ -1,5 +1,6 @@
 package com.techgroup.techcop.security.jwt;
 
+import com.techgroup.techcop.security.model.CustomUserDetails;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,10 +19,13 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
+        CustomUserDetails customUser = (CustomUserDetails) userDetails;
+
         return Jwts.builder()
-                .setSubject(userDetails.getUsername()) // normalmente el email
+                .setSubject(userDetails.getUsername())
+                .claim("role", customUser.getCustomer().getRole().getRoleName())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 horas
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10))
                 .signWith(getSignKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
