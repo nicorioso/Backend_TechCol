@@ -7,6 +7,7 @@ import com.techgroup.techcop.service.product.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -64,35 +65,42 @@ public class ProductController {
         }
     }
 
-
-
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProduct(
             @PathVariable int id,
-            @RequestPart("data") ProductRequest data,
+            @RequestPart("data") String dataJson,
             @RequestPart(name = "image", required = false) MultipartFile image) {
 
-        Optional<Products> opt = productService.getProduct(id);
-        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ProductRequest data = mapper.readValue(dataJson, ProductRequest.class);
 
-        Products p = opt.get();
-
-        p.setProductName(data.getProductName());
-        p.setDescription(data.getDescription());
-        p.setPrice(data.getPrice());
-        p.setStock(data.getStock());
-
-        if (image != null && !image.isEmpty()) {
-            try {
-                p.setImage(image.getBytes());
-            } catch (Exception e) {
-                return ResponseEntity.status(500).body("Error almacenando imagen");
+            Optional<Products> opt = productService.getProduct(id);
+            if (opt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Producto no encontrado con id: " + id);
             }
+
+            Products product = opt.get();
+
+            product.setProductName(data.getProductName());
+            product.setDescription(data.getDescription());
+            product.setPrice(data.getPrice());
+            product.setStock(data.getStock());
+
+            if (image != null && !image.isEmpty()) {
+                product.setImage(image.getBytes());
+            }
+
+            Products updated = productService.addProduct(product);
+
+            return ResponseEntity.ok(updated);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Error procesando datos: " + e.getMessage());
         }
-
-        return ResponseEntity.ok(productService.addProduct(p));
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable int id) {

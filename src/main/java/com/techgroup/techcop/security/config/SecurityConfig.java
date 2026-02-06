@@ -1,10 +1,12 @@
 package com.techgroup.techcop.security.config;
 
+import com.techgroup.techcop.controllers.ProductController;
 import com.techgroup.techcop.security.jwt.JwtAuthenticationFilter;
 import com.techgroup.techcop.security.model.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -39,7 +41,10 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/**").permitAll()
+                        .requestMatchers("/api/Cart/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/Products/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/Products/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/Products/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
