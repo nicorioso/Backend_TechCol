@@ -1,7 +1,9 @@
 package com.techgroup.techcop.service.cart.impl;
 
+import com.techgroup.techcop.model.dto.AddCartItemRequest;
 import com.techgroup.techcop.model.entity.CartItem;
 import com.techgroup.techcop.model.entity.Carts;
+import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.model.entity.Products;
 import com.techgroup.techcop.repository.CartDetailsRepository;
 import com.techgroup.techcop.repository.CartsRepository;
@@ -42,7 +44,13 @@ public class CartServiceImpl implements CartService {
 
     @Override
     public Carts postCartItem(CartItem cartItem, Integer customerId) {
+
         Carts cart = validationService.validateCustomerCart(customerId);
+
+        Products product = productsRepository.findById(cartItem.getProduct_id())
+                .orElseThrow(() ->
+                        new RuntimeException("No existe el producto con id " + cartItem.getProduct_id())
+                );
 
         Optional<CartItem> existingItemOpt = cart.getItems().stream()
                 .filter(i -> i.getProduct_id().equals(cartItem.getProduct_id()))
@@ -51,29 +59,42 @@ public class CartServiceImpl implements CartService {
         if (existingItemOpt.isPresent()) {
             CartItem existingItem = existingItemOpt.get();
             existingItem.setQuantity(existingItem.getQuantity() + cartItem.getQuantity());
+
         } else {
-            cartItem.setCart(cart);
-            cart.getItems().add(cartItem);
+            CartItem newItem = new CartItem();
+            newItem.setProduct_id(product.getProduct_id());
+            newItem.setQuantity(cartItem.getQuantity());
+            newItem.setUnit_price(product.getPrice());
+            newItem.setCart(cart);
+
+            cart.getItems().add(newItem);
         }
 
         priceService.recalculateTotal(cart);
+
         return cartsRepository.save(cart);
     }
 
+
     @Override
     public void deleteCartItem(Integer cartItemId, Integer customerId) {
+
         Carts cart = validationService.validateCustomerCart(customerId);
-        CartItem item = cartDetailsRepository.findById(cartItemId)
-                .orElseThrow(() -> new RuntimeException("Item no encontrado"));
+
+        CartItem item = cart.getItems().stream()
+                .filter(i -> i.getCart_item_id().equals(cartItemId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Item no pertenece al carrito"));
 
         if (item.getQuantity() > 1) {
             item.setQuantity(item.getQuantity() - 1);
-            cartDetailsRepository.save(item);
         } else {
-            cartDetailsRepository.delete(item);
+            cart.getItems().remove(item);
         }
 
         priceService.recalculateTotal(cart);
+
         cartsRepository.save(cart);
     }
+
 }

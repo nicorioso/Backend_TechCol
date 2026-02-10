@@ -29,10 +29,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getServletPath();
-        if (path.startsWith("/TechCop/api/v1/auth")) {
+
+        if (path.startsWith("/auth") || path.startsWith("/cart")) {
             filterChain.doFilter(request, response);
             return;
         }
+
 
         final String authHeader = request.getHeader("Authorization");
         final String jwt;

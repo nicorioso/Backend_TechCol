@@ -18,7 +18,11 @@ public class CartValidationService {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
         if (customer.getCart() == null) {
-            throw new RuntimeException("Customer Cart is null");
+            Carts cart = new Carts();
+            cart.setCustomer(customer);
+            cart.setCart_price(0.0);
+            customer.setCart(cart);
+            return cart;
         }
         return customer.getCart();
     }

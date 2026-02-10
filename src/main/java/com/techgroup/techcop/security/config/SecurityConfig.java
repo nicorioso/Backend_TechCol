@@ -24,7 +24,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = false)
 @Configuration
 public class SecurityConfig {
 
@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/api/Cart/**").permitAll()
+                        .requestMatchers("/cart/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/Products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/Products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/Products/**").hasRole("ADMIN")
