@@ -10,14 +10,18 @@ public class VerificationCode {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
+    @Column(name = "code")
     private String code;
 
+    @Column(name = "expiration_time")
     private LocalDateTime expirationTime;
 
+    @Column(name = "used")
     private boolean used;
 
+    @Column(name = "attempts")
     private int attempts;
 
     @ManyToOne
@@ -26,7 +30,7 @@ public class VerificationCode {
 
     public VerificationCode(){}
 
-    public VerificationCode(Long id, String code, LocalDateTime expirationTime, boolean used, int attempts, Customer customer) {
+    public VerificationCode(Integer id, String code, LocalDateTime expirationTime, boolean used, int attempts, Customer customer) {
         this.id = id;
         this.code = code;
         this.expirationTime = expirationTime;
@@ -35,11 +39,11 @@ public class VerificationCode {
         this.customer = customer;
     }
 
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 

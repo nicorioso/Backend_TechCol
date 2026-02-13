@@ -1,5 +1,6 @@
 package com.techgroup.techcop.controllers;
 
+import com.techgroup.techcop.model.dto.VerifyCodeRequest;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.model.dto.LoginRequest;
 import com.techgroup.techcop.service.auth.AuthenticationService;
@@ -30,4 +31,15 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authenticationService.login(request.getEmail(), request.getPassword()));
     }
+
+    @PostMapping("/verify")
+    public ResponseEntity<?> verify(@RequestBody VerifyCodeRequest request) {
+
+        String token = authenticationService
+                .verifyCode(request.getEmail(), request.getCode());
+
+        return ResponseEntity.ok(token);
+    }
+
+
 }
