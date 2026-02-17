@@ -1,15 +1,21 @@
 package com.techgroup.techcop.service.auth.impl;
 
+import com.techgroup.techcop.model.dto.AuthResponse;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.security.jwt.JwtService;
-import com.techgroup.techcop.security.model.CustomUserDetails;
 import com.techgroup.techcop.service.auth.AuthenticationService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
 
 @Service
 public class AuthenticationServiceImpl implements AuthenticationService {
@@ -19,8 +25,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AuthenticationManager authManager;
     private final VerificationCodeService verificationCodeService;
 
-
-    public AuthenticationServiceImpl(CustomerRepository customerRepository, JwtService jwtService, AuthenticationManager authManager, VerificationCodeService verificationCodeService) {
+    public AuthenticationServiceImpl(CustomerRepository customerRepository,
+                                     JwtService jwtService,
+                                     AuthenticationManager authManager,
+                                     VerificationCodeService verificationCodeService) {
         this.customerRepository = customerRepository;
         this.jwtService = jwtService;
         this.authManager = authManager;
@@ -34,18 +42,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 new UsernamePasswordAuthenticationToken(email, password)
         );
 
-        Customer customer = customerRepository.findByCustomerEmail(email)
+        Customer customer = customerRepository
+                .findByCustomerEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         verificationCodeService.generateAndSendCode(customer);
 
-        return "Verification code sent to email";
+        return "Verification code sent";
     }
 
     @Override
-    public String verifyCode(String email, String code) {
+    public AuthResponse verifyCode(String email,
+                                   String code,
+                                   HttpServletResponse response) {
 
-        Customer customer = customerRepository.findByCustomerEmail(email)
+        Customer customer = customerRepository
+                .findByCustomerEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         boolean valid = verificationCodeService.verifyCode(customer, code);
@@ -54,8 +66,65 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new RuntimeException("Invalid code");
         }
 
-        return jwtService.generateToken(new CustomUserDetails(customer));
+        String role = customer.getRole().getRoleName();
+
+        String accessToken = jwtService.generateAccessToken(email, role);
+        String refreshToken = jwtService.generateRefreshToken(email);
+
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(false) // TRUE en producción HTTPS
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .sameSite("Strict")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return new AuthResponse(accessToken);
     }
 
+    @Override
+    public AuthResponse refresh(HttpServletRequest request) {
 
+        if (request.getCookies() == null) {
+            throw new RuntimeException("No refresh token");
+        }
+
+        String refreshToken = Arrays.stream(request.getCookies())
+                .filter(c -> c.getName().equals("refreshToken"))
+                .findFirst()
+                .map(Cookie::getValue)
+                .orElse(null);
+
+        if (refreshToken == null || jwtService.isTokenExpired(refreshToken)) {
+            throw new RuntimeException("Invalid refresh token");
+        }
+
+        String email = jwtService.extractUsername(refreshToken);
+
+        Customer customer = customerRepository
+                .findByCustomerEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String role = customer.getRole().getRoleName();
+
+        String newAccessToken =
+                jwtService.generateAccessToken(email, role);
+
+        return new AuthResponse(newAccessToken);
+    }
+
+    @Override
+    public void logout(HttpServletResponse response) {
+
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
 }
