@@ -29,9 +29,8 @@ public class Products {
     @Column(name = "product_stock")
     private Integer stock;
 
-    @Lob
-    @Column(name = "product_image", columnDefinition = "LONGBLOB")
-    private byte[] image;
+    @Column(name = "product_image")
+    private String imageUrl;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
@@ -45,13 +44,13 @@ public class Products {
 
     }
 
-    public Products(Integer product_id, String productName, String description, Double price, Integer stock, byte[] image, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Products(Integer product_id, String productName, String description, Double price, Integer stock, String imageUrl, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.product_id = product_id;
         this.productName = productName;
         this.description = description;
         this.price = price;
         this.stock = stock;
-        this.image = image;
+        this.imageUrl = imageUrl;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -104,12 +103,12 @@ public class Products {
         this.product_id = product_id;
     }
 
-    public byte[] getImage() {
-        return image;
+    public String getImageUrl() {
+        return imageUrl;
     }
 
-    public void setImage(byte[] image) {
-        this.image = image;
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public LocalDateTime getCreatedAt() {

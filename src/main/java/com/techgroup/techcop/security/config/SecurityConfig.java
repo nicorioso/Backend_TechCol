@@ -42,9 +42,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/cart/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/Products/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/Products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/Products/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/products/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/products/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

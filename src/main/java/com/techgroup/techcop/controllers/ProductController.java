@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/Products")
+@RequestMapping("/products")
 public class ProductController {
 
     private final ProductService productService;
@@ -40,65 +40,36 @@ public class ProductController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> addProduct(
-            @RequestPart("data") String dataJson,
+            @RequestPart("data") String data,
             @RequestPart(name = "image", required = false) MultipartFile image) {
 
         try {
             ObjectMapper mapper = new ObjectMapper();
-            ProductRequest data = mapper.readValue(dataJson, ProductRequest.class);
+            ProductRequest request = mapper.readValue(data, ProductRequest.class);
 
-            Products p = new Products();
-            p.setProductName(data.getProductName());
-            p.setDescription(data.getDescription());
-            p.setPrice(data.getPrice());
-            p.setStock(data.getStock());
-
-            if (image != null && !image.isEmpty()) {
-                p.setImage(image.getBytes());
-            }
-
-            Products saved = productService.addProduct(p);
+            Products saved = productService.addProduct(request, image);
             return ResponseEntity.ok(saved);
 
         } catch (Exception e) {
-            return ResponseEntity.status(400).body("Error procesando JSON: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error parsing JSON");
         }
     }
 
     @PostMapping(value = "/update/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateProduct(
             @PathVariable int id,
-            @RequestPart("data") String dataJson,
+            @RequestPart("data") String data,
             @RequestPart(name = "image", required = false) MultipartFile image) {
 
         try {
             ObjectMapper mapper = new ObjectMapper();
-            ProductRequest data = mapper.readValue(dataJson, ProductRequest.class);
+            ProductRequest request = mapper.readValue(data, ProductRequest.class);
 
-            Optional<Products> opt = productService.getProduct(id);
-            if (opt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Producto no encontrado con id: " + id);
-            }
-
-            Products product = opt.get();
-
-            product.setProductName(data.getProductName());
-            product.setDescription(data.getDescription());
-            product.setPrice(data.getPrice());
-            product.setStock(data.getStock());
-
-            if (image != null && !image.isEmpty()) {
-                product.setImage(image.getBytes());
-            }
-
-            Products updated = productService.addProduct(product);
-
+            Products updated = productService.updateProduct(id, request, image);
             return ResponseEntity.ok(updated);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Error procesando datos: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error parsing JSON");
         }
     }
 

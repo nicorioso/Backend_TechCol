@@ -56,6 +56,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwtService.isTokenValid(jwt, userDetails)) {
 
+                System.out.println("Usuario autenticado: " + userDetails.getUsername());
+                System.out.println("Authorities desde UserDetails: " + userDetails.getAuthorities());
+
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
                                 userDetails,
@@ -70,6 +73,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext()
                         .setAuthentication(authToken);
+
+                System.out.println("Authentication seteado con: " +
+                        SecurityContextHolder.getContext().getAuthentication().getAuthorities());
             }
         }
 
