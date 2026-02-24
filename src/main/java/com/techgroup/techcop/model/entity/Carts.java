@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,7 @@ public class Carts {
     private Integer cart_id;
 
     @Column(name = "cart_price")
-    private Double cart_price;
+    private BigDecimal cart_price;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
@@ -39,7 +40,7 @@ public class Carts {
 
     public Carts() {}
 
-    public Carts(Integer cart_id, Double cart_price, LocalDateTime create_at, LocalDateTime updatedAt, Customer customer, List<CartItem> items) {
+    public Carts(Integer cart_id, BigDecimal cart_price, LocalDateTime create_at, LocalDateTime updatedAt, Customer customer, List<CartItem> items) {
         this.cart_id = cart_id;
         this.cart_price = cart_price;
         this.create_at = create_at;
@@ -56,11 +57,11 @@ public class Carts {
         this.cart_id = cart_id;
     }
 
-    public Double getCart_price() {
+    public BigDecimal getCart_price() {
         return cart_price;
     }
 
-    public void setCart_price(Double cart_price) {
+    public void setCart_price(BigDecimal cart_price) {
         this.cart_price = cart_price;
     }
 

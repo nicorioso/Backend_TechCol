@@ -5,6 +5,8 @@ import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 public class CartValidationService {
 
@@ -20,7 +22,7 @@ public class CartValidationService {
         if (customer.getCart() == null) {
             Carts cart = new Carts();
             cart.setCustomer(customer);
-            cart.setCart_price(0.0);
+            cart.setCart_price(BigDecimal.valueOf(0.0));
             customer.setCart(cart);
             return cart;
         }

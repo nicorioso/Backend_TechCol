@@ -4,6 +4,8 @@ import com.techgroup.techcop.model.entity.Carts;
 import com.techgroup.techcop.model.entity.CartItem;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 public class CartPriceService {
 
@@ -12,6 +14,6 @@ public class CartPriceService {
                 .stream()
                 .mapToDouble(i -> i.getUnit_price() * i.getQuantity())
                 .sum();
-        cart.setCart_price(total);
+        cart.setCart_price(BigDecimal.valueOf(total));
     }
 }
