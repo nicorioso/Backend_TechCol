@@ -51,10 +51,9 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public String createPayPalOrder() {
+    public Map<String, String> createPayPalOrder() {
 
         Customer customer = getAuthenticatedCustomer();
-
         Carts cart = getCustomerCart(customer);
 
         if (cart.getItems().isEmpty()) {
@@ -62,7 +61,6 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         BigDecimal totalDouble = cart.getCart_price();
-
         String accessToken = getAccessToken();
 
         HttpHeaders headers = new HttpHeaders();
@@ -90,7 +88,31 @@ public class PaymentServiceImpl implements PaymentService {
                 Map.class
         );
 
-        return response.getBody().get("id").toString();
+        Map<String, Object> responseBody = response.getBody();
+
+        String orderId = responseBody.get("id").toString();
+
+        // 🔥 Extraer approve URL
+        String approveUrl = null;
+
+        var links = (java.util.List<Map<String, Object>>) responseBody.get("links");
+
+        for (Map<String, Object> link : links) {
+            if (link.get("rel").equals("approve")) {
+                approveUrl = link.get("href").toString();
+                break;
+            }
+        }
+
+        if (approveUrl == null) {
+            throw new RuntimeException("No approve link returned by PayPal");
+        }
+
+        Map<String, String> result = new HashMap<>();
+        result.put("orderId", orderId);
+        result.put("approveUrl", approveUrl);
+
+        return result;
     }
 
     @Override
