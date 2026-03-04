@@ -1,10 +1,13 @@
 package com.techgroup.techcop.service.auth.impl;
 
 import com.techgroup.techcop.model.dto.AuthResponse;
+import com.techgroup.techcop.model.dto.GoogleAuthRequest;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.security.jwt.JwtService;
+import com.techgroup.techcop.security.oauth.GoogleTokenVerifierService;
 import com.techgroup.techcop.service.auth.AuthenticationService;
+import com.techgroup.techcop.service.customer.CustomerService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,15 +23,16 @@ import java.util.Arrays;
 @Service
 public class AuthenticationServiceImpl implements AuthenticationService {
 
+    private final GoogleTokenVerifierService googleVerifier;
+    private final CustomerService customerService;
     private final CustomerRepository customerRepository;
     private final JwtService jwtService;
     private final AuthenticationManager authManager;
     private final VerificationCodeService verificationCodeService;
 
-    public AuthenticationServiceImpl(CustomerRepository customerRepository,
-                                     JwtService jwtService,
-                                     AuthenticationManager authManager,
-                                     VerificationCodeService verificationCodeService) {
+    public AuthenticationServiceImpl(GoogleTokenVerifierService googleVerifier, CustomerService customerService, CustomerRepository customerRepository, JwtService jwtService, AuthenticationManager authManager, VerificationCodeService verificationCodeService) {
+        this.googleVerifier = googleVerifier;
+        this.customerService = customerService;
         this.customerRepository = customerRepository;
         this.jwtService = jwtService;
         this.authManager = authManager;
@@ -49,6 +53,58 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         verificationCodeService.generateAndSendCode(customer);
 
         return "Verification code sent";
+    }
+
+    @Override
+    public AuthResponse loginWithGoogle(
+            GoogleAuthRequest request,
+            HttpServletResponse response) throws Exception {
+
+        var payload = googleVerifier.verify(request.idToken());
+
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+
+        Customer customer = customerRepository
+                .findByCustomerEmail(email)
+                .orElseGet(() -> registerGoogleUser(email, name));
+
+        String accessToken = jwtService.generateAccessToken(
+                customer.getCustomerEmail(),
+                customer.getRole().toString()
+        );
+
+        String refreshToken = jwtService.generateRefreshToken(
+                customer.getCustomerEmail()
+        );
+
+        addRefreshTokenCookie(response, refreshToken);
+
+        return new AuthResponse(accessToken);
+    }
+
+    private void addRefreshTokenCookie(
+            HttpServletResponse response,
+            String refreshToken) {
+
+        Cookie cookie = new Cookie("refreshToken", refreshToken);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true); // SOLO en producción HTTPS
+        cookie.setPath("/api/auth/refresh");
+        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 días
+
+        response.addCookie(cookie);
+    }
+
+    private Customer registerGoogleUser(String email, String name) {
+
+        Customer customer = new Customer();
+        customer.setCustomerEmail(email);
+        customer.setCustomerName(name);
+        customer.setCustomerPassword(null); // no password because Google
+        // asigna rol por defecto aquí
+
+        return customerRepository.save(customer);
     }
 
     @Override

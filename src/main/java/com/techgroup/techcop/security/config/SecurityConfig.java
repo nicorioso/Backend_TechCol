@@ -1,6 +1,5 @@
 package com.techgroup.techcop.security.config;
 
-import com.techgroup.techcop.controllers.ProductController;
 import com.techgroup.techcop.security.jwt.JwtAuthenticationFilter;
 import com.techgroup.techcop.security.model.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;

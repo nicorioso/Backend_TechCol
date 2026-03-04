@@ -1,6 +1,7 @@
 package com.techgroup.techcop.controllers;
 
 import com.techgroup.techcop.model.dto.AuthResponse;
+import com.techgroup.techcop.model.dto.GoogleAuthRequest;
 import com.techgroup.techcop.model.dto.LoginRequest;
 import com.techgroup.techcop.model.dto.VerifyCodeRequest;
 import com.techgroup.techcop.model.entity.Customer;
@@ -39,6 +40,17 @@ public class AuthController {
                         request.getPassword()
                 )
         );
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(
+            @RequestBody GoogleAuthRequest request,
+            HttpServletResponse response) throws Exception {
+
+        AuthResponse authResponse =
+                authenticationService.loginWithGoogle(request, response);
+
+        return ResponseEntity.ok(authResponse);
     }
 
     @PostMapping("/verify")
