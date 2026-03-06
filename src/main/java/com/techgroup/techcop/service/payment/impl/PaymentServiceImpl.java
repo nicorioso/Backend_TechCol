@@ -1,8 +1,8 @@
 package com.techgroup.techcop.service.payment.impl;
 
-import com.techgroup.techcop.model.entity.Customer;
-import com.techgroup.techcop.model.entity.Orders;
+import com.techgroup.techcop.model.entity.*;
 import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.repository.OrderDetailsRepository;
 import com.techgroup.techcop.repository.OrderRepository;
 import com.techgroup.techcop.service.payment.PaymentService;
 import jakarta.transaction.Transactional;
@@ -12,7 +12,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import com.techgroup.techcop.model.entity.Carts;
 import com.techgroup.techcop.repository.CartsRepository;
 
 import java.math.BigDecimal;
@@ -30,6 +29,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderRepository orderRepository;
     private final RestTemplate restTemplate;
     private final CartsRepository cartsRepository;
+    private final OrderDetailsRepository orderDetailsRepository;
 
     @Value("${paypal.client-id}")
     private String clientId;
@@ -43,11 +43,14 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentServiceImpl(CustomerRepository customerRepository,
                               OrderRepository orderRepository,
                               RestTemplate restTemplate,
-                              CartsRepository cartsRepository) {
+                              CartsRepository cartsRepository,
+                              OrderDetailsRepository orderDetailsRepository) {
+
         this.customerRepository = customerRepository;
         this.orderRepository = orderRepository;
         this.restTemplate = restTemplate;
         this.cartsRepository = cartsRepository;
+        this.orderDetailsRepository = orderDetailsRepository;
     }
 
     @Override
@@ -153,7 +156,24 @@ public class PaymentServiceImpl implements PaymentService {
         order.setPaypalOrderId(paypalOrderId);
         order.setStatus("PAID");
 
-        orderRepository.save(order);
+        Orders savedOrder = orderRepository.save(order);
+
+        Products product = new Products();
+
+        cart.getItems().forEach(item -> {
+
+            OrderDetails detail = new OrderDetails();
+            detail.setOrder(savedOrder);
+            product.setProduct_id(item.getProduct_id());
+            detail.setProduct(product);
+            detail.setQuantity(item.getQuantity());
+            detail.setUnitPrice(BigDecimal.valueOf(item.getUnit_price()));
+            detail.setCreatedAt(LocalDateTime.now());
+            detail.setUpdatedAt(LocalDateTime.now());
+
+            orderDetailsRepository.save(detail);
+
+        });
 
         cart.getItems().clear();
         cart.setCart_price(BigDecimal.valueOf(0.0));

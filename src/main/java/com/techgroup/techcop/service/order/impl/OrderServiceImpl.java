@@ -34,11 +34,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderRequest updateOrder(Integer id, Orders order) {
-        return null;
-    }
-
-    @Override
     public void deleteOrder(Integer idCustomer, Integer idOrder) {
 
     }

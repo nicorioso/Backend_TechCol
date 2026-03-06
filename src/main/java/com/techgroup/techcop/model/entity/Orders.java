@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "orders")
@@ -36,17 +37,21 @@ public class Orders {
     @Column(name = "status")
     private String status;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<OrderDetails> orderDetails;
+
     public Orders() {}
 
-    public Orders(Integer orderId, BigDecimal orderPrice, Customer customer, LocalDateTime orderDate, LocalDateTime createdAt, String paypalOrderId, LocalDateTime updatedAt, String status) {
+    public Orders(Integer orderId, BigDecimal orderPrice, Customer customer, LocalDateTime orderDate, LocalDateTime createdAt, LocalDateTime updatedAt, String paypalOrderId, String status, List<OrderDetails> orderDetails) {
         this.orderId = orderId;
         this.orderPrice = orderPrice;
         this.customer = customer;
         this.orderDate = orderDate;
         this.createdAt = createdAt;
-        this.paypalOrderId = paypalOrderId;
         this.updatedAt = updatedAt;
+        this.paypalOrderId = paypalOrderId;
         this.status = status;
+        this.orderDetails = orderDetails;
     }
 
     public Integer getOrderId() {
@@ -111,5 +116,13 @@ public class Orders {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public List<OrderDetails> getOrderDetails() {
+        return orderDetails;
+    }
+
+    public void setOrderDetails(List<OrderDetails> orderDetails) {
+        this.orderDetails = orderDetails;
     }
 }
