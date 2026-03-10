@@ -34,7 +34,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void deleteOrder(Integer idCustomer, Integer idOrder) {
-
+    public void deleteOrder(Integer idOrder) {
+        Orders orders = orderRepository.findById(idOrder)
+                .orElseThrow(() -> new RuntimeException("No existe la orden con id " + idOrder));
+        orderRepository.delete(orders);
     }
 }

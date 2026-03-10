@@ -9,5 +9,5 @@ import java.util.Optional;
 public interface OrderService {
     public List<Orders> getAllOrders();
     Optional<Orders> getOrdersByIdCustomer(Integer id);
-    void deleteOrder(Integer idCustomer, Integer idOrder);
+    void deleteOrder(Integer idOrder);
 }
