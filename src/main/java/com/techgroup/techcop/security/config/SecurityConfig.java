@@ -61,6 +61,7 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
         config.addAllowedOrigin("http://localhost:4200"); // Angular
         config.addAllowedOrigin("http://localhost:5173"); // React
+        config.addAllowedOrigin("https://frontend-techcol.onrender.com"); //render
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 
