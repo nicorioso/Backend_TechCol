@@ -18,7 +18,8 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOrigins(
                         "http://localhost:3000",      // React - puerto 3000
                         "http://localhost:5173",      // Vite - puerto 5173
-                        "http://127.0.0.1:5173"      // Vite local
+                        "http://127.0.0.1:5173",      // Vite local
+                        "https://frontend-techcol.onrender.com"
                 )
 
                 // Métodos HTTP permitidos
