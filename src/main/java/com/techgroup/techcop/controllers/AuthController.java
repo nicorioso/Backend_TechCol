@@ -1,10 +1,12 @@
 package com.techgroup.techcop.controllers;
 
 import com.techgroup.techcop.model.dto.AuthResponse;
+import com.techgroup.techcop.model.dto.ChangePasswordRequest;
 import com.techgroup.techcop.model.dto.LoginRequest;
 import com.techgroup.techcop.model.dto.VerifyCodeRequest;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.service.auth.AuthenticationService;
+import com.techgroup.techcop.service.auth.ChangePasswordService;
 import com.techgroup.techcop.service.auth.RegistrationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,11 +19,14 @@ public class AuthController {
 
     private final AuthenticationService authenticationService;
     private final RegistrationService registrationService;
+    private final ChangePasswordService changePasswordService;
 
     public AuthController(AuthenticationService authenticationService,
-                          RegistrationService registrationService) {
+                          RegistrationService registrationService,
+                          ChangePasswordService changePasswordService) {
         this.authenticationService = authenticationService;
         this.registrationService = registrationService;
+        this.changePasswordService = changePasswordService;
     }
 
     @PostMapping("/register")
@@ -37,6 +42,36 @@ public class AuthController {
                 authenticationService.login(
                         request.getEmail(),
                         request.getPassword()
+                )
+        );
+    }
+
+    @PostMapping("/changePasswordAuthen")
+    public ResponseEntity<?> changePasswordAuthenticate (@RequestBody LoginRequest login) {
+        return ResponseEntity.ok(
+                changePasswordService.changePasswordAuthenticate(
+                        login.getEmail(),
+                        login.getPassword()
+                )
+        );
+    }
+
+    @PostMapping("/changePasswordVerifiCode")
+    public ResponseEntity<?> changePasswordVerifiCode (@RequestBody VerifyCodeRequest request) {
+        return ResponseEntity.ok(
+                changePasswordService.changePasswordVerifiCode(
+                        request.getEmail(),
+                        request.getCode()
+                )
+        );
+    }
+
+    @PostMapping("changePassword")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest request){
+        return ResponseEntity.ok(
+                changePasswordService.changePassword(
+                        request.getEmail(),
+                        request.getNewPassword()
                 )
         );
     }

@@ -34,6 +34,9 @@ public class Customer {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @Column(name = "password_reset_verified")
+    private boolean passwordRsetVerified;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -116,6 +119,14 @@ public class Customer {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public boolean isPasswordRsetVerified() {
+        return passwordRsetVerified;
+    }
+
+    public void setPasswordRsetVerified(boolean passwordRsetVerified) {
+        this.passwordRsetVerified = passwordRsetVerified;
     }
 
     public Carts getCart() {
