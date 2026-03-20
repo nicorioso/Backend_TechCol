@@ -2,6 +2,7 @@ package com.techgroup.techcop.controllers;
 
 import com.techgroup.techcop.model.dto.AuthResponse;
 import com.techgroup.techcop.model.dto.ChangePasswordRequest;
+import com.techgroup.techcop.model.dto.GoogleAuthRequest;
 import com.techgroup.techcop.model.dto.LoginRequest;
 import com.techgroup.techcop.model.dto.VerifyCodeRequest;
 import com.techgroup.techcop.model.entity.Customer;
@@ -42,6 +43,18 @@ public class AuthController {
                 authenticationService.login(
                         request.getEmail(),
                         request.getPassword()
+                )
+        );
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(
+            @RequestBody GoogleAuthRequest request,
+            HttpServletResponse response) {
+        return ResponseEntity.ok(
+                authenticationService.authenticateWithGoogle(
+                        request.getCredential(),
+                        response
                 )
         );
     }
