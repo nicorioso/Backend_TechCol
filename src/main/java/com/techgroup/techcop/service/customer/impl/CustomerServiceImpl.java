@@ -1,15 +1,12 @@
 package com.techgroup.techcop.service.customer.impl;
 
 
-import com.techgroup.techcop.model.entity.Carts;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CartsRepository;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.service.customer.CustomerService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
