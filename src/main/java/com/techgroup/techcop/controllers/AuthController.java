@@ -41,7 +41,8 @@ public class AuthController {
         return ResponseEntity.ok(
                 authenticationService.login(
                         request.getEmail(),
-                        request.getPassword()
+                        request.getPassword(),
+                        request.getChannel()
                 )
         );
     }
@@ -51,7 +52,8 @@ public class AuthController {
         return ResponseEntity.ok(
                 changePasswordService.changePasswordAuthenticate(
                         login.getEmail(),
-                        login.getPassword()
+                        login.getPassword(),
+                        login.getChannel()
                 )
         );
     }
