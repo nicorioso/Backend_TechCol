@@ -39,9 +39,14 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public String login(String email, String password, String channel) {
 
-        authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
-        );
+        try {
+            authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password)
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error autenticando: " + e.getMessage());
+        }
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
