@@ -2,19 +2,25 @@ package com.techgroup.techcop.security.jwt;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
 import java.security.Key;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Service
 public class JwtService {
 
-    private static final String SECRET_KEY =
-            "cambia_esta_clave_a_una_muy_larga_y_segura_32_bytes_minimo";
+    @Value("${jwt.secret}")
+    private String secretKey;
 
     private Key getSignKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException("JWT secret is not configured");
+        }
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
     // 🔹 ACCESS TOKEN (15 minutos)
