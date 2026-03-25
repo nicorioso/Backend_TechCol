@@ -3,6 +3,7 @@ package com.techgroup.techcop.service.auth.impl;
 import com.techgroup.techcop.model.dto.AuthResponse;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.security.jwt.JwtService;
 import com.techgroup.techcop.service.auth.AuthenticationService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
@@ -36,19 +37,27 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public String login(String email, String password) {
+    public String login(String email, String password, String channel) {
 
-        authManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
-        );
+        try {
+            authManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password)
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error autenticando: " + e.getMessage());
+        }
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        verificationCodeService.generateAndSendCode(customer);
+        verificationCodeService.generateAndSendCode(
+                customer,
+                VerificationChannel.valueOf(channel.toUpperCase())
+        );
 
-        return "Verification code sent";
+        return "Verification code sent via " + channel;
     }
 
     @Override

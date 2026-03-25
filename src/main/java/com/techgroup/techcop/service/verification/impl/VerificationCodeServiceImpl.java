@@ -3,7 +3,9 @@ package com.techgroup.techcop.service.verification.impl;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.model.entity.VerificationCode;
 import com.techgroup.techcop.repository.VerificationCodeRepository;
+import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.service.email.EmailService;
+import com.techgroup.techcop.service.sms.SmsService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import org.springframework.stereotype.Service;
 
@@ -15,15 +17,18 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
 
     private final VerificationCodeRepository repository;
     private final EmailService emailService;
+    private final SmsService smsService;
 
     public VerificationCodeServiceImpl(VerificationCodeRepository repository,
-                                       EmailService emailService) {
+                                       EmailService emailService,
+                                       SmsService smsService) {
         this.repository = repository;
         this.emailService = emailService;
+        this.smsService = smsService;
     }
 
     @Override
-    public void generateAndSendCode(Customer customer) {
+    public void generateAndSendCode(Customer customer, VerificationChannel channel) {
 
         String code = String.valueOf(100000 + new Random().nextInt(900000));
 
@@ -36,8 +41,25 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
 
         repository.save(verification);
 
-        emailService.sendVerificationCode(customer.getCustomerEmail(), code);
+        switch (channel) {
 
+            case EMAIL:
+                emailService.sendVerificationCode(
+                        customer.getCustomerEmail(),
+                        code
+                );
+                break;
+
+            case SMS:
+                smsService.sendSms(
+                        customer.getCustomerPhoneNumber(),
+                        "Tu código es: " + code
+                );
+                break;
+
+            default:
+                throw new RuntimeException("Invalid channel");
+        }
     }
 
     @Override

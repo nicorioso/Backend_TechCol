@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public interface AuthenticationService {
 
-    String login(String email, String password);
+    String login(String email, String password, String channel);
 
     AuthResponse verifyCode(String email, String code,
                             HttpServletResponse response);

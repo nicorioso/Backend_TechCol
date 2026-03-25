@@ -2,6 +2,7 @@ package com.techgroup.techcop.service.auth.impl;
 
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.service.auth.ChangePasswordService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,14 +26,17 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
     }
 
     @Override
-    public String changePasswordAuthenticate(String email, String password) {
+    public String changePasswordAuthenticate(String email, String password, String channel) {
         authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password)
         );
 
         Customer customer = getCustomerByEmail(email);
 
-        verificationCodeService.generateAndSendCode(customer);
+        verificationCodeService.generateAndSendCode(
+                customer,
+                VerificationChannel.valueOf(channel.toUpperCase())
+        );
 
         return "Verification code sent";
     }
