@@ -1,6 +1,7 @@
 package com.techgroup.techcop.service.auth;
 
 import com.techgroup.techcop.model.dto.AuthResponse;
+import com.techgroup.techcop.security.enums.VerificationPurpose;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 

@@ -38,4 +38,5 @@ public class LoginRequest {
     public void setChannel(String channel) {
         this.channel = channel;
     }
+
 }

@@ -8,6 +8,7 @@ import com.techgroup.techcop.model.entity.Role;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.repository.RoleRepository;
 import com.techgroup.techcop.security.enums.VerificationChannel;
+import com.techgroup.techcop.security.enums.VerificationPurpose;
 import com.techgroup.techcop.security.jwt.JwtService;
 import com.techgroup.techcop.service.auth.AuthenticationService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
@@ -77,7 +78,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         verificationCodeService.generateAndSendCode(
                 customer,
-                VerificationChannel.valueOf(channel.toUpperCase())
+                VerificationChannel.valueOf(channel.toUpperCase()),
+                VerificationPurpose.LOGIN
         );
 
         return "Verification code sent via " + channel;

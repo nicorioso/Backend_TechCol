@@ -3,6 +3,7 @@ package com.techgroup.techcop.service.auth.impl;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.security.enums.VerificationChannel;
+import com.techgroup.techcop.security.enums.VerificationPurpose;
 import com.techgroup.techcop.service.auth.ChangePasswordService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -35,7 +36,8 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
 
         verificationCodeService.generateAndSendCode(
                 customer,
-                VerificationChannel.valueOf(channel.toUpperCase())
+                VerificationChannel.valueOf(channel.toUpperCase()),
+                VerificationPurpose.CHANGE_PASSWORD
         );
 
         return "Verification code sent";
