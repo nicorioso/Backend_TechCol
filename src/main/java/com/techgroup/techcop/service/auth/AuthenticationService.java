@@ -11,6 +11,9 @@ public interface AuthenticationService {
     AuthResponse verifyCode(String email, String code,
                             HttpServletResponse response);
 
+    AuthResponse authenticateWithGoogle(String credential,
+                                        HttpServletResponse response);
+
     AuthResponse refresh(HttpServletRequest request);
 
     void logout(HttpServletResponse response);
