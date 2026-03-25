@@ -43,7 +43,8 @@ public class AuthController {
                 authenticationService.login(
                         request.getEmail(),
                         request.getPassword(),
-                        request.getChannel()
+                        request.getChannel(),
+                        request.getPurpose()
                 )
         );
     }
@@ -66,7 +67,8 @@ public class AuthController {
                 changePasswordService.changePasswordAuthenticate(
                         login.getEmail(),
                         login.getPassword(),
-                        login.getChannel()
+                        login.getChannel(),
+                        login.getPurpose()
                 )
         );
     }

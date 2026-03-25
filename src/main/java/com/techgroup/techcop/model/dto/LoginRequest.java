@@ -5,14 +5,16 @@ public class LoginRequest {
     private String email;
     private String password;
     private String channel;
+    private String purpose;
 
     public LoginRequest() {
     }
 
-    public LoginRequest(String email, String password, String channel) {
+    public LoginRequest(String email, String password, String channel, String purpose) {
         this.email = email;
         this.password = password;
         this.channel = channel;
+        this.purpose = purpose;
     }
 
     public String getEmail() {
@@ -37,5 +39,13 @@ public class LoginRequest {
 
     public void setChannel(String channel) {
         this.channel = channel;
+    }
+
+    public String getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(String purpose) {
+        this.purpose = purpose;
     }
 }

@@ -4,6 +4,7 @@ import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.model.entity.VerificationCode;
 import com.techgroup.techcop.repository.VerificationCodeRepository;
 import com.techgroup.techcop.security.enums.VerificationChannel;
+import com.techgroup.techcop.security.enums.VerificationPurpose;
 import com.techgroup.techcop.service.email.EmailService;
 import com.techgroup.techcop.service.sms.SmsService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
@@ -28,7 +29,7 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
     }
 
     @Override
-    public void generateAndSendCode(Customer customer, VerificationChannel channel) {
+    public void generateAndSendCode(Customer customer, VerificationChannel channel, VerificationPurpose purpose) {
 
         String code = String.valueOf(100000 + new Random().nextInt(900000));
 
@@ -46,7 +47,8 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
             case EMAIL:
                 emailService.sendVerificationCode(
                         customer.getCustomerEmail(),
-                        code
+                        code,
+                        purpose
                 );
                 break;
 
