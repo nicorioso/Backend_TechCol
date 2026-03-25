@@ -30,12 +30,15 @@ public class AuthController {
         this.changePasswordService = changePasswordService;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Customer customer) {
+    @PostMapping("/registerRequest")
+    public ResponseEntity<?> registerRequest(@RequestBody Customer customer) {
         return ResponseEntity.ok(
-                registrationService.register(customer)
+                registrationService.registerRequest(customer)
         );
     }
+
+    @PostMapping("/verifyRegister")
+    public ResponseEntity<?> verifiRegister(@RequestBody )
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -43,8 +46,7 @@ public class AuthController {
                 authenticationService.login(
                         request.getEmail(),
                         request.getPassword(),
-                        request.getChannel(),
-                        request.getPurpose()
+                        request.getChannel()
                 )
         );
     }
@@ -67,8 +69,7 @@ public class AuthController {
                 changePasswordService.changePasswordAuthenticate(
                         login.getEmail(),
                         login.getPassword(),
-                        login.getChannel(),
-                        login.getPurpose()
+                        login.getChannel()
                 )
         );
     }

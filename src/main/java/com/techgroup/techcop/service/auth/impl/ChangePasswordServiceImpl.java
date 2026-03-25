@@ -27,7 +27,7 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
     }
 
     @Override
-    public String changePasswordAuthenticate(String email, String password, String channel, String purpose) {
+    public String changePasswordAuthenticate(String email, String password, String channel) {
         authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password)
         );

@@ -61,7 +61,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public String login(String email, String password, String channel, String purpose) {
+    public String login(String email, String password, String channel) {
 
         try {
             authManager.authenticate(
@@ -79,7 +79,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         verificationCodeService.generateAndSendCode(
                 customer,
                 VerificationChannel.valueOf(channel.toUpperCase()),
-                VerificationPurpose.valueOf(purpose.toUpperCase())
+                VerificationPurpose.LOGIN
         );
 
         return "Verification code sent via " + channel;
