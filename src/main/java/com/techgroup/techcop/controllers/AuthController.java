@@ -1,10 +1,6 @@
 package com.techgroup.techcop.controllers;
 
-import com.techgroup.techcop.model.dto.AuthResponse;
-import com.techgroup.techcop.model.dto.ChangePasswordRequest;
-import com.techgroup.techcop.model.dto.GoogleAuthRequest;
-import com.techgroup.techcop.model.dto.LoginRequest;
-import com.techgroup.techcop.model.dto.VerifyCodeRequest;
+import com.techgroup.techcop.model.dto.*;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.service.auth.AuthenticationService;
 import com.techgroup.techcop.service.auth.ChangePasswordService;
@@ -38,7 +34,14 @@ public class AuthController {
     }
 
     @PostMapping("/verifyRegister")
-    public ResponseEntity<?> verifiRegister(@RequestBody )
+    public ResponseEntity<?> verifiRegister(@RequestBody RegisterRequest registerRequest) {
+        return ResponseEntity.ok(
+                registrationService.verifyRegister(
+                        registerRequest.getEmail(),
+                        registerRequest.getCode()
+                )
+        );
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
