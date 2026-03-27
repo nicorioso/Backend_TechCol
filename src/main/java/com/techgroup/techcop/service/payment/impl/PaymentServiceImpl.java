@@ -1,9 +1,11 @@
 package com.techgroup.techcop.service.payment.impl;
 
+import com.techgroup.techcop.model.dto.PaymentCallbackResponse;
 import com.techgroup.techcop.model.entity.*;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.repository.OrderDetailsRepository;
 import com.techgroup.techcop.repository.OrderRepository;
+import com.techgroup.techcop.repository.ProductsRepository;
 import com.techgroup.techcop.service.payment.PaymentService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,14 +13,18 @@ import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import com.techgroup.techcop.repository.CartsRepository;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -30,6 +36,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final RestTemplate restTemplate;
     private final CartsRepository cartsRepository;
     private final OrderDetailsRepository orderDetailsRepository;
+    private final ProductsRepository productsRepository;
 
     @Value("${paypal.client-id}")
     private String clientId;
@@ -40,17 +47,31 @@ public class PaymentServiceImpl implements PaymentService {
     @Value("${paypal.base-url}")
     private String baseUrl;
 
+    @Value("${paypal.return-url}")
+    private String returnUrl;
+
+    @Value("${paypal.cancel-url}")
+    private String cancelUrl;
+
+    @Value("${paypal.frontend-return-url:}")
+    private String frontendReturnUrl;
+
+    @Value("${paypal.frontend-cancel-url:}")
+    private String frontendCancelUrl;
+
     public PaymentServiceImpl(CustomerRepository customerRepository,
                               OrderRepository orderRepository,
                               RestTemplate restTemplate,
                               CartsRepository cartsRepository,
-                              OrderDetailsRepository orderDetailsRepository) {
+                              OrderDetailsRepository orderDetailsRepository,
+                              ProductsRepository productsRepository) {
 
         this.customerRepository = customerRepository;
         this.orderRepository = orderRepository;
         this.restTemplate = restTemplate;
         this.cartsRepository = cartsRepository;
         this.orderDetailsRepository = orderDetailsRepository;
+        this.productsRepository = productsRepository;
     }
 
     @Override
@@ -80,18 +101,41 @@ public class PaymentServiceImpl implements PaymentService {
         Map<String, Object> body = new HashMap<>();
         body.put("intent", "CAPTURE");
         body.put("purchase_units", new Object[]{purchaseUnit});
+        if (hasText(returnUrl) && hasText(cancelUrl)) {
+            Map<String, Object> experienceContext = new HashMap<>();
+            experienceContext.put("return_url", returnUrl);
+            experienceContext.put("cancel_url", cancelUrl);
+            experienceContext.put("user_action", "PAY_NOW");
+
+            Map<String, Object> paypalPaymentSource = new HashMap<>();
+            paypalPaymentSource.put("experience_context", experienceContext);
+
+            Map<String, Object> paymentSource = new HashMap<>();
+            paymentSource.put("paypal", paypalPaymentSource);
+            body.put("payment_source", paymentSource);
+        }
 
         HttpEntity<Map<String, Object>> request =
                 new HttpEntity<>(body, headers);
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/v2/checkout/orders",
-                HttpMethod.POST,
-                request,
-                Map.class
-        );
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.exchange(
+                    baseUrl + "/v2/checkout/orders",
+                    HttpMethod.POST,
+                    request,
+                    Map.class
+            );
+        } catch (HttpStatusCodeException e) {
+            throw new RuntimeException("PayPal create order failed: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("PayPal create order request failed", e);
+        }
 
         Map<String, Object> responseBody = response.getBody();
+        if (responseBody == null || responseBody.get("id") == null) {
+            throw new RuntimeException("PayPal did not return a valid order");
+        }
 
         String orderId = responseBody.get("id").toString();
 
@@ -121,8 +165,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public void captureOrder(String paypalOrderId) {
 
+        if (orderRepository.findByPaypalOrderId(paypalOrderId).isPresent()) {
+            return;
+        }
+
         Customer customer = getAuthenticatedCustomer();
         Carts cart = getCustomerCart(customer);
+        if (cart.getItems().isEmpty()) {
+            throw new RuntimeException("Cart is empty");
+        }
 
         String accessToken = getAccessToken();
 
@@ -132,14 +183,26 @@ public class PaymentServiceImpl implements PaymentService {
 
         HttpEntity<String> request = new HttpEntity<>("{}", headers); // 🔥 body vacío JSON
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/v2/checkout/orders/" + paypalOrderId + "/capture",
-                HttpMethod.POST,
-                request,
-                Map.class
-        );
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.exchange(
+                    baseUrl + "/v2/checkout/orders/" + paypalOrderId + "/capture",
+                    HttpMethod.POST,
+                    request,
+                    Map.class
+            );
+        } catch (HttpStatusCodeException e) {
+            throw new RuntimeException("PayPal capture failed: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            throw new RuntimeException("PayPal capture request failed", e);
+        }
 
-        String status = response.getBody().get("status").toString();
+        Map<String, Object> responseBody = response.getBody();
+        if (responseBody == null || responseBody.get("status") == null) {
+            throw new RuntimeException("PayPal did not return a valid capture response");
+        }
+
+        String status = responseBody.get("status").toString();
 
         if (!status.equals("COMPLETED")) {
             throw new RuntimeException("Payment not completed");
@@ -156,28 +219,71 @@ public class PaymentServiceImpl implements PaymentService {
         order.setPaypalOrderId(paypalOrderId);
         order.setStatus("PAID");
 
-        Orders savedOrder = orderRepository.save(order);
-
-        Products product = new Products();
+        List<OrderDetails> details = new ArrayList<>();
 
         cart.getItems().forEach(item -> {
+            Products product = productsRepository.findById(item.getProduct_id())
+                    .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProduct_id()));
 
             OrderDetails detail = new OrderDetails();
-            detail.setOrder(savedOrder);
-            product.setProduct_id(item.getProduct_id());
+            detail.setOrder(order);
             detail.setProduct(product);
             detail.setQuantity(item.getQuantity());
             detail.setUnitPrice(BigDecimal.valueOf(item.getUnit_price()));
             detail.setCreatedAt(LocalDateTime.now());
             detail.setUpdatedAt(LocalDateTime.now());
-
-            orderDetailsRepository.save(detail);
-
+            details.add(detail);
         });
 
+        order.setOrderDetails(details);
+        Orders savedOrder = orderRepository.save(order);
+        orderDetailsRepository.saveAll(savedOrder.getOrderDetails());
+
         cart.getItems().clear();
-        cart.setCart_price(BigDecimal.valueOf(0.0));
+        cart.setCart_price(BigDecimal.ZERO);
         cartsRepository.save(cart);
+    }
+
+    @Override
+    public PaymentCallbackResponse handlePaypalReturn(String token, String payerId) {
+        PaymentCallbackResponse response = new PaymentCallbackResponse();
+        response.setStatus("approved");
+        response.setPaypalOrderId(token);
+        response.setPayerId(payerId);
+        response.setMessage("PayPal approval received. Call POST /api/paypal/capture/{token} from the frontend.");
+
+        if (hasText(frontendReturnUrl)) {
+            response.setRedirectUrl(
+                    UriComponentsBuilder.fromUriString(frontendReturnUrl)
+                            .queryParam("token", token)
+                            .queryParam("status", "approved")
+                            .queryParamIfPresent("payerId", java.util.Optional.ofNullable(payerId))
+                            .build(true)
+                            .toUriString()
+            );
+        }
+
+        return response;
+    }
+
+    @Override
+    public PaymentCallbackResponse handlePaypalCancel(String token) {
+        PaymentCallbackResponse response = new PaymentCallbackResponse();
+        response.setStatus("cancelled");
+        response.setPaypalOrderId(token);
+        response.setMessage("The user cancelled the PayPal payment.");
+
+        if (hasText(frontendCancelUrl)) {
+            response.setRedirectUrl(
+                    UriComponentsBuilder.fromUriString(frontendCancelUrl)
+                            .queryParam("status", "cancelled")
+                            .queryParamIfPresent("token", java.util.Optional.ofNullable(token))
+                            .build(true)
+                            .toUriString()
+            );
+        }
+
+        return response;
     }
 
     private String getAccessToken() {
@@ -218,5 +324,9 @@ public class PaymentServiceImpl implements PaymentService {
     private Carts getCustomerCart(Customer customer) {
         return cartsRepository.findByCustomer(customer)
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }
