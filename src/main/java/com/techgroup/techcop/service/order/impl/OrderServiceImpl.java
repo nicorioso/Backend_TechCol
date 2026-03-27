@@ -7,7 +7,6 @@ import com.techgroup.techcop.service.order.OrderService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -24,13 +23,8 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Optional<Orders> getOrdersByIdCustomer(Integer id) {
-        Optional<Orders> orders = orderRepository.findById(id);
-        if (orders.isPresent()){
-            return orders;
-        }else {
-            return Optional.empty();
-        }
+    public List<Orders> getOrdersByCustomerId(Integer id) {
+        return orderRepository.findAllByCustomerCustomerId(id);
     }
 
     @Override

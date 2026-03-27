@@ -7,8 +7,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
-
 @RestController
 @RequestMapping("/order")
 public class OrderController {
@@ -26,12 +24,9 @@ public class OrderController {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'CLIENTE')")
-    @GetMapping("/{id}")
+    @GetMapping({"/customer/{id}", "/{id}"})
     public ResponseEntity<?> getOrdersByCustomerId(@PathVariable int id) {
-        Optional<Orders> orders = orderService.getOrdersByIdCustomer(id);
-        return orders
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        return ResponseEntity.ok(orderService.getOrdersByCustomerId(id));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'CLIENTE')")

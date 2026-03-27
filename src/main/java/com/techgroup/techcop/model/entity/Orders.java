@@ -1,5 +1,6 @@
 package com.techgroup.techcop.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
@@ -8,6 +9,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Orders {
 
     @Id
@@ -20,6 +22,7 @@ public class Orders {
 
     @ManyToOne
     @JoinColumn(name = "customer_id")
+    @JsonIgnoreProperties({"customerPassword", "cart", "createdAt", "updatedAt", "role"})
     private Customer customer;
 
     @Column(name = "order_date")
