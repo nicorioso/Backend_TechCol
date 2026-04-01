@@ -1,13 +1,16 @@
 package com.techgroup.techcop.service.product.impl;
 
 
+import com.techgroup.techcop.exception.ProductInUseException;
 import com.techgroup.techcop.model.dto.ProductRequest;
 import com.techgroup.techcop.model.entity.Products;
+import com.techgroup.techcop.repository.CartDetailsRepository;
+import com.techgroup.techcop.repository.OrderDetailsRepository;
 import com.techgroup.techcop.repository.ProductsRepository;
 import com.techgroup.techcop.service.product.ProductService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -23,11 +26,19 @@ import java.util.UUID;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductsRepository productsRepository;
+    private final CartDetailsRepository cartDetailsRepository;
+    private final OrderDetailsRepository orderDetailsRepository;
+
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    public ProductServiceImpl(ProductsRepository productsRepository) {
+    public ProductServiceImpl(
+            ProductsRepository productsRepository,
+            CartDetailsRepository cartDetailsRepository,
+            OrderDetailsRepository orderDetailsRepository) {
         this.productsRepository = productsRepository;
+        this.cartDetailsRepository = cartDetailsRepository;
+        this.orderDetailsRepository = orderDetailsRepository;
     }
 
     @Override
@@ -115,9 +126,19 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
+    @Transactional
     public void deleteProduct(int id) {
         Products products = productsRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
+
+        if (cartDetailsRepository.existsByProductId(id)) {
+            throw new ProductInUseException("No se puede eliminar el producto porque existe en carritos activos.");
+        }
+
+        if (orderDetailsRepository.existsByProductId(id)) {
+            throw new ProductInUseException("No se puede eliminar el producto porque tiene pedidos asociados.");
+        }
+
         productsRepository.delete(products);
     }
 

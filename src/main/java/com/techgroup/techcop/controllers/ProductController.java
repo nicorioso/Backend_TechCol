@@ -1,6 +1,7 @@
 package com.techgroup.techcop.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techgroup.techcop.exception.ProductInUseException;
 import com.techgroup.techcop.model.dto.ProductRequest;
 import com.techgroup.techcop.model.entity.Products;
 import com.techgroup.techcop.service.product.ProductService;
@@ -78,8 +79,10 @@ public class ProductController {
         try {
             productService.deleteProduct(id);
             return ResponseEntity.noContent().build();
+        } catch (ProductInUseException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
         }catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
     }
 
