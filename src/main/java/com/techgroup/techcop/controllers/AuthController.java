@@ -33,6 +33,22 @@ public class AuthController {
         );
     }
 
+    @GetMapping("/google/client-config")
+    public ResponseEntity<GoogleClientConfigResponse> googleClientConfig() {
+        return ResponseEntity.ok(
+                new GoogleClientConfigResponse(authenticationService.getGoogleClientId())
+        );
+    }
+
+    @PostMapping("/account-exists")
+    public ResponseEntity<AccountExistsResponse> accountExists(@RequestBody AccountExistsRequest request) {
+        return ResponseEntity.ok(
+                new AccountExistsResponse(
+                        authenticationService.accountExists(request.getEmail())
+                )
+        );
+    }
+
     @PostMapping("/verifyRegister")
     public ResponseEntity<?> verifiRegister(@RequestBody RegisterRequest registerRequest) {
         return ResponseEntity.ok(
@@ -92,6 +108,38 @@ public class AuthController {
         return ResponseEntity.ok(
                 changePasswordService.changePassword(
                         request.getEmail(),
+                        request.getNewPassword()
+                )
+        );
+    }
+
+    @PostMapping("/password-recovery/request")
+    public ResponseEntity<?> requestPasswordRecovery(@RequestBody PasswordRecoveryRequest request) {
+        return ResponseEntity.ok(
+                changePasswordService.requestPasswordRecovery(
+                        request.getIdentifier(),
+                        request.getChannel()
+                )
+        );
+    }
+
+    @PostMapping("/password-recovery/verify")
+    public ResponseEntity<?> verifyPasswordRecovery(@RequestBody PasswordRecoveryVerifyRequest request) {
+        return ResponseEntity.ok(
+                changePasswordService.verifyPasswordRecoveryCode(
+                        request.getIdentifier(),
+                        request.getChannel(),
+                        request.getCode()
+                )
+        );
+    }
+
+    @PostMapping("/password-recovery/reset")
+    public ResponseEntity<?> resetPasswordRecovery(@RequestBody PasswordRecoveryResetRequest request) {
+        return ResponseEntity.ok(
+                changePasswordService.resetPasswordByRecovery(
+                        request.getIdentifier(),
+                        request.getChannel(),
                         request.getNewPassword()
                 )
         );

@@ -29,6 +29,19 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     public String registerRequest(Customer customer) {
+        String normalizedEmail = customer.getCustomerEmail() == null
+                ? ""
+                : customer.getCustomerEmail().trim().toLowerCase();
+
+        if (normalizedEmail.isEmpty()) {
+            throw new RuntimeException("El correo es obligatorio");
+        }
+
+        if (customerRepository.existsByCustomerEmail(normalizedEmail)) {
+            throw new RuntimeException("Ya existe una cuenta registrada con ese correo");
+        }
+
+        customer.setCustomerEmail(normalizedEmail);
 
         customer.setCustomerPassword(passwordEncoder.encode(customer.getCustomerPassword()));
         customer.setRole(roleRepository.findByRoleName("ROLE_CLIENTE")
@@ -46,6 +59,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
 
     public String verifyRegister(String email, String code) {
+        email = email == null ? "" : email.trim().toLowerCase();
 
         Customer customer = customerRepository.findByCustomerEmail(email)
                 .orElseThrow();

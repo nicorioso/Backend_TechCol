@@ -61,7 +61,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
+    public String getGoogleClientId() {
+        return googleClientId == null ? "" : googleClientId.trim();
+    }
+
+    @Override
+    public boolean accountExists(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        return !normalizedEmail.isEmpty()
+                && customerRepository.existsByCustomerEmail(normalizedEmail);
+    }
+
+    @Override
     public String login(String email, String password, String channel) {
+
+        email = normalizeEmail(email);
 
         try {
             authManager.authenticate(
@@ -89,6 +103,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public AuthResponse verifyCode(String email,
                                    String code,
                                    HttpServletResponse response) {
+
+        email = normalizeEmail(email);
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
@@ -155,6 +171,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         String email = jwtService.extractUsername(refreshToken);
+        email = normalizeEmail(email);
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
@@ -255,5 +272,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private String defaultIfBlank(String primary, String fallback) {
         return isBlank(primary) ? (fallback == null ? "" : fallback.trim()) : primary.trim();
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
     }
 }
