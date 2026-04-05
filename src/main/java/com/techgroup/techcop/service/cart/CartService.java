@@ -9,6 +9,7 @@ public interface CartService {
 
     public List<CartItem> getCartItems(Integer customerId);
     public Carts postCartItem(CartItem id, Integer customerId);
+    public Carts syncCartItems(List<CartItem> items, Integer customerId);
     //public Carts putCartItem(Carts cartItem);
     public void deleteCartItem(Integer CartItemId, Integer customerId);
 

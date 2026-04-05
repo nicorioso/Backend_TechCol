@@ -36,6 +36,16 @@ public class CartController {
         }
     }
 
+    @PutMapping("/{customerId}/sync")
+    public ResponseEntity<?> syncCartService(@RequestBody List<CartItem> items, @PathVariable Integer customerId) {
+        try {
+            return ResponseEntity.ok(cartService.syncCartItems(items, customerId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{CartItemId}/{CustomerId}")
     public ResponseEntity<?> deleteCartService(@PathVariable Integer CartItemId, @PathVariable Integer CustomerId) {
         cartService.deleteCartItem(CartItemId, CustomerId);

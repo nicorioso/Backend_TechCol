@@ -121,7 +121,7 @@ public class PaymentServiceImpl implements PaymentService {
         ResponseEntity<Map> response;
         try {
             response = restTemplate.exchange(
-                    baseUrl + "/v2/checkout/orders",
+                    resolvePaypalApiBaseUrl() + "/v2/checkout/orders",
                     HttpMethod.POST,
                     request,
                     Map.class
@@ -142,17 +142,36 @@ public class PaymentServiceImpl implements PaymentService {
         // 🔥 Extraer approve URL
         String approveUrl = null;
 
-        var links = (java.util.List<Map<String, Object>>) responseBody.get("links");
+        List<String> availableRelations = new ArrayList<>();
+        Object linksObject = responseBody.get("links");
 
-        for (Map<String, Object> link : links) {
-            if (link.get("rel").equals("approve")) {
-                approveUrl = link.get("href").toString();
-                break;
+        if (linksObject instanceof List<?> rawLinks) {
+            for (Object rawLink : rawLinks) {
+                if (!(rawLink instanceof Map<?, ?> rawMap)) {
+                    continue;
+                }
+
+                Object relObject = rawMap.get("rel");
+                Object hrefObject = rawMap.get("href");
+                String rel = relObject != null ? relObject.toString() : "";
+
+                if (hasText(rel)) {
+                    availableRelations.add(rel);
+                }
+
+                if (!hasText(rel) || hrefObject == null) {
+                    continue;
+                }
+
+                if ("approve".equalsIgnoreCase(rel) || "payer-action".equalsIgnoreCase(rel)) {
+                    approveUrl = hrefObject.toString();
+                    break;
+                }
             }
         }
 
         if (approveUrl == null) {
-            throw new RuntimeException("No approve link returned by PayPal");
+            throw new RuntimeException("PayPal order created without approval link. Returned rel values: " + availableRelations);
         }
 
         Map<String, String> result = new HashMap<>();
@@ -186,7 +205,7 @@ public class PaymentServiceImpl implements PaymentService {
         ResponseEntity<Map> response;
         try {
             response = restTemplate.exchange(
-                    baseUrl + "/v2/checkout/orders/" + paypalOrderId + "/capture",
+                    resolvePaypalApiBaseUrl() + "/v2/checkout/orders/" + paypalOrderId + "/capture",
                     HttpMethod.POST,
                     request,
                     Map.class
@@ -287,6 +306,9 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String getAccessToken() {
+        if (!hasText(clientId) || !hasText(clientSecret)) {
+            throw new RuntimeException("PayPal credentials are missing. Configure PAYPAL_ID and PAYPAL_SECRET in the backend environment.");
+        }
 
         String auth = clientId + ":" + clientSecret;
         String encodedAuth = Base64.getEncoder()
@@ -299,14 +321,31 @@ public class PaymentServiceImpl implements PaymentService {
         HttpEntity<String> request =
                 new HttpEntity<>("grant_type=client_credentials", headers);
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-                baseUrl + "/v1/oauth2/token",
-                HttpMethod.POST,
-                request,
-                Map.class
-        );
+        ResponseEntity<Map> response;
+        try {
+            response = restTemplate.exchange(
+                    resolvePaypalApiBaseUrl() + "/v1/oauth2/token",
+                    HttpMethod.POST,
+                    request,
+                    Map.class
+            );
+        } catch (HttpStatusCodeException e) {
+            String responseBody = e.getResponseBodyAsString();
+            String details = hasText(responseBody) ? responseBody : e.getStatusText();
+            throw new RuntimeException(
+                    "PayPal token request failed (" + e.getStatusCode().value() + "): " + details,
+                    e
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("PayPal token request could not reach the API. Verify paypal.base-url and credentials.", e);
+        }
 
-        return response.getBody().get("access_token").toString();
+        Map<String, Object> responseBody = response.getBody();
+        if (responseBody == null || responseBody.get("access_token") == null) {
+            throw new RuntimeException("PayPal did not return an access token");
+        }
+
+        return responseBody.get("access_token").toString();
     }
 
     private Customer getAuthenticatedCustomer() {
@@ -328,5 +367,19 @@ public class PaymentServiceImpl implements PaymentService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private String resolvePaypalApiBaseUrl() {
+        String configuredBaseUrl = hasText(baseUrl) ? baseUrl.trim() : "https://api-m.sandbox.paypal.com";
+
+        if (configuredBaseUrl.contains("sandbox.paypal.com")) {
+            return "https://api-m.sandbox.paypal.com";
+        }
+
+        if (configuredBaseUrl.contains("paypal.com") && !configuredBaseUrl.contains("api-m.")) {
+            return configuredBaseUrl.replace("https://", "https://api-m.");
+        }
+
+        return configuredBaseUrl;
     }
 }
