@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 
 public class ProductResponse {
 
+    private static final String PUBLIC_UPLOAD_PREFIX = "/uploads/products/";
+
     private Integer id;
     private Integer productId;
     private String productName;
@@ -24,10 +26,31 @@ public class ProductResponse {
         response.setDescription(product.getDescription());
         response.setPrice(product.getPrice());
         response.setStock(product.getStock());
-        response.setImageUrl(product.getImageUrl());
+        response.setImageUrl(toPublicImageUrl(product.getImageUrl()));
         response.setCreatedAt(product.getCreatedAt());
         response.setUpdatedAt(product.getUpdatedAt());
         return response;
+    }
+
+    private static String toPublicImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return imageUrl;
+        }
+
+        if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith(PUBLIC_UPLOAD_PREFIX)) {
+            return imageUrl;
+        }
+
+        String normalized = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+        if (normalized.startsWith("uploads/products/")) {
+            return "/" + normalized;
+        }
+
+        if (normalized.startsWith("products/")) {
+            return "/uploads/" + normalized;
+        }
+
+        return PUBLIC_UPLOAD_PREFIX + normalized;
     }
 
     public Integer getId() {

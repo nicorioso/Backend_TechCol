@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 
 public class CartItemResponse {
 
+    private static final String PUBLIC_UPLOAD_PREFIX = "/uploads/products/";
+
     private Integer cartItemId;
     private Integer productId;
     private Integer quantity;
@@ -23,10 +25,31 @@ public class CartItemResponse {
         response.setQuantity(item.getQuantity());
         response.setUnitPrice(item.getUnit_price());
         response.setProductName(product != null ? product.getProductName() : null);
-        response.setImageUrl(product != null ? product.getImageUrl() : null);
+        response.setImageUrl(product != null ? toPublicImageUrl(product.getImageUrl()) : null);
         response.setCreatedAt(item.getCreatedAt());
         response.setUpdatedAt(item.getUpdatedAt());
         return response;
+    }
+
+    private static String toPublicImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return imageUrl;
+        }
+
+        if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://") || imageUrl.startsWith(PUBLIC_UPLOAD_PREFIX)) {
+            return imageUrl;
+        }
+
+        String normalized = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+        if (normalized.startsWith("uploads/products/")) {
+            return "/" + normalized;
+        }
+
+        if (normalized.startsWith("products/")) {
+            return "/uploads/" + normalized;
+        }
+
+        return PUBLIC_UPLOAD_PREFIX + normalized;
     }
 
     public Integer getCartItemId() {

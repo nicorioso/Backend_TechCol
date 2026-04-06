@@ -70,13 +70,15 @@ class ProductControllerTest {
         product.setDescription("RTX 4070");
         product.setPrice(7800.0);
         product.setStock(4);
+        product.setImageUrl("/uploads/products/laptop.png");
 
         when(productService.getProducts()).thenReturn(List.of(product));
 
         mockMvc.perform(get("/products"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].description").value("RTX 4070"));
+                .andExpect(jsonPath("$[0].description").value("RTX 4070"))
+                .andExpect(jsonPath("$[0].imageUrl").value("/uploads/products/laptop.png"));
     }
 
     @Test
