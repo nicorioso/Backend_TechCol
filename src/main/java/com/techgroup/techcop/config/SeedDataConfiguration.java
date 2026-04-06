@@ -10,6 +10,7 @@ import com.techgroup.techcop.repository.ProductsRepository;
 import com.techgroup.techcop.repository.RoleRepository;
 import com.techgroup.techcop.security.password.PasswordHashingService;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 @Configuration
+@Profile("dev")
 public class SeedDataConfiguration {
 
     @Bean

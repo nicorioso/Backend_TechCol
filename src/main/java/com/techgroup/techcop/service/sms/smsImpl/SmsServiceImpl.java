@@ -20,12 +20,21 @@ public class SmsServiceImpl implements SmsService {
     @Value("${twilio.phone.number}")
     private String fromNumber;
 
+    private boolean enabled;
+
     @PostConstruct
     public void init() {
+        enabled = !accountSid.isBlank() && !authToken.isBlank() && !fromNumber.isBlank();
+        if (!enabled) {
+            return;
+        }
         Twilio.init(accountSid, authToken);
     }
 
     public void sendSms(String to, String messageText) {
+        if (!enabled) {
+            throw new IllegalStateException("Twilio is not configured");
+        }
 
         Message message = Message.creator(
                 new PhoneNumber(to),
