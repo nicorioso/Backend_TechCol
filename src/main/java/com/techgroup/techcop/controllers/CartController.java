@@ -1,17 +1,27 @@
 package com.techgroup.techcop.controllers;
 
-import com.techgroup.techcop.model.entity.Carts;
-import com.techgroup.techcop.model.entity.CartItem;
+import com.techgroup.techcop.model.dto.AddCartItemRequest;
+import com.techgroup.techcop.model.dto.CartItemResponse;
+import com.techgroup.techcop.model.dto.CartResponse;
+import com.techgroup.techcop.model.dto.CartSummaryResponse;
 import com.techgroup.techcop.service.cart.CartService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
+@Validated
 @RequestMapping("/cart")
+@Tag(name = "Cart", description = "Operacion segura del carrito por cliente autenticado")
+@SecurityRequirement(name = "bearerAuth")
 public class CartController {
 
     private final CartService cartService;
@@ -20,36 +30,42 @@ public class CartController {
         this.cartService = cartService;
     }
 
+    @Operation(summary = "Obtener todos los carritos")
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<CartSummaryResponse>> getAllCarts() {
+        return ResponseEntity.ok(cartService.getAllCarts());
+    }
+
+    @Operation(summary = "Obtener el carrito de un cliente")
+    @PreAuthorize("hasRole('ADMIN') or #customerId == authentication.principal.id")
     @GetMapping("/{customerId}")
-    public ResponseEntity<List<CartItem>> getCartService(@PathVariable Integer customerId) {
+    public ResponseEntity<List<CartItemResponse>> getCartService(@PathVariable @Positive(message = "El id del cliente debe ser mayor que cero") Integer customerId) {
         return ResponseEntity.ok(cartService.getCartItems(customerId));
     }
 
+    @Operation(summary = "Agregar un item al carrito de un cliente")
+    @PreAuthorize("hasRole('ADMIN') or #customerId == authentication.principal.id")
     @PostMapping("/{customerId}")
-    public ResponseEntity<?> postCartService(@RequestBody CartItem cartItem,  @PathVariable Integer customerId) {
-        try {
-            return ResponseEntity.ok().body(cartService.postCartItem(cartItem, customerId));
-        }catch (Exception e) {
-            Carts carts = cartItem.getCart();
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("No existe el producto con el id " + carts.getCart_id());
-        }
+    public ResponseEntity<CartResponse> postCartService(@Valid @RequestBody AddCartItemRequest cartItem,
+                                                        @PathVariable @Positive(message = "El id del cliente debe ser mayor que cero") Integer customerId) {
+        return ResponseEntity.ok(cartService.postCartItem(cartItem, customerId));
     }
 
+    @Operation(summary = "Sincronizar los items del carrito de un cliente")
+    @PreAuthorize("hasRole('ADMIN') or #customerId == authentication.principal.id")
     @PutMapping("/{customerId}/sync")
-    public ResponseEntity<?> syncCartService(@RequestBody List<CartItem> items, @PathVariable Integer customerId) {
-        try {
-            return ResponseEntity.ok(cartService.syncCartItems(items, customerId));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(e.getMessage());
-        }
+    public ResponseEntity<CartResponse> syncCartService(@RequestBody List<@Valid AddCartItemRequest> items,
+                                                        @PathVariable @Positive(message = "El id del cliente debe ser mayor que cero") Integer customerId) {
+        return ResponseEntity.ok(cartService.syncCartItems(items, customerId));
     }
 
-    @DeleteMapping("/{CartItemId}/{CustomerId}")
-    public ResponseEntity<?> deleteCartService(@PathVariable Integer CartItemId, @PathVariable Integer CustomerId) {
-        cartService.deleteCartItem(CartItemId, CustomerId);
+    @Operation(summary = "Eliminar o decrementar un item del carrito")
+    @PreAuthorize("hasRole('ADMIN') or #customerId == authentication.principal.id")
+    @DeleteMapping("/{cartItemId}/{customerId}")
+    public ResponseEntity<?> deleteCartService(@PathVariable @Positive(message = "El id del item debe ser mayor que cero") Integer cartItemId,
+                                               @PathVariable @Positive(message = "El id del cliente debe ser mayor que cero") Integer customerId) {
+        cartService.deleteCartItem(cartItemId, customerId);
         return ResponseEntity.ok().build();
     }
-
 }

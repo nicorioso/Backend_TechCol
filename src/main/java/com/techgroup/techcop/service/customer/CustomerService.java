@@ -1,14 +1,23 @@
 package com.techgroup.techcop.service.customer;
 
-import com.techgroup.techcop.model.entity.Customer;
+import com.techgroup.techcop.model.dto.CustomerProfileUpdateRequest;
+import com.techgroup.techcop.model.dto.CustomerResponse;
+import com.techgroup.techcop.model.dto.CustomerRoleUpdateRequest;
+
 import java.util.List;
 import java.util.Optional;
 
 public interface CustomerService {
 
-    public List<Customer> getCustomer();
-    Optional<Customer> getCustomerById(Integer id);
-    Customer updateCustomer(Integer id, Customer customer);
+    List<CustomerResponse> getCustomer();
+
+    Optional<CustomerResponse> getCustomerById(Integer id);
+
+    CustomerResponse updateCustomer(Integer id, CustomerProfileUpdateRequest customer);
+
     void deleteCustomer(Integer id);
-    public Customer patchCustomer(Integer id, Customer customer);
+
+    CustomerResponse patchCustomer(Integer id, CustomerProfileUpdateRequest customer);
+
+    CustomerResponse updateRole(Integer id, CustomerRoleUpdateRequest request);
 }

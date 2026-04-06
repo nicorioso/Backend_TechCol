@@ -48,5 +48,9 @@ public class CustomUserDetails implements UserDetails {
         return customer;
     }
 
+    public Integer getId() {
+        return customer.getCustomerId();
+    }
+
 
 }

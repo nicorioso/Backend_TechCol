@@ -1,83 +1,143 @@
 package com.techgroup.techcop.service.customer.impl;
 
-
-import com.techgroup.techcop.model.entity.Carts;
+import com.techgroup.techcop.model.dto.CustomerProfileUpdateRequest;
+import com.techgroup.techcop.model.dto.CustomerResponse;
+import com.techgroup.techcop.model.dto.CustomerRoleUpdateRequest;
 import com.techgroup.techcop.model.entity.Customer;
-import com.techgroup.techcop.repository.CartsRepository;
+import com.techgroup.techcop.model.entity.Role;
 import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.repository.RoleRepository;
+import com.techgroup.techcop.security.access.ResourceAuthorizationService;
+import com.techgroup.techcop.security.password.PasswordHashingService;
 import com.techgroup.techcop.service.customer.CustomerService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final CartsRepository cartsRepository;
+    private final RoleRepository roleRepository;
+    private final ResourceAuthorizationService resourceAuthorizationService;
+    private final PasswordHashingService passwordHashingService;
 
-    public CustomerServiceImpl(CustomerRepository customerRepository, CartsRepository cartsRepository) {
+    public CustomerServiceImpl(CustomerRepository customerRepository,
+                               RoleRepository roleRepository,
+                               ResourceAuthorizationService resourceAuthorizationService,
+                               PasswordHashingService passwordHashingService) {
         this.customerRepository = customerRepository;
-        this.cartsRepository = cartsRepository;
+        this.roleRepository = roleRepository;
+        this.resourceAuthorizationService = resourceAuthorizationService;
+        this.passwordHashingService = passwordHashingService;
     }
 
     @Override
-    public List<Customer> getCustomer() {
-        return customerRepository.findAll();
+    public List<CustomerResponse> getCustomer() {
+        return customerRepository.findAll().stream()
+                .map(CustomerResponse::fromEntity)
+                .toList();
     }
 
     @Override
-    public Optional<Customer> getCustomerById(Integer id) {
-        Optional<Customer> customer = customerRepository.findById(id);
-        if (customer.isPresent()) {
-            return customer;
-        }else {
-            return Optional.empty();
-        }
+    public Optional<CustomerResponse> getCustomerById(Integer id) {
+        resourceAuthorizationService.assertCurrentCustomer(id);
+        return customerRepository.findById(id)
+                .map(CustomerResponse::fromEntity);
     }
 
     @Override
-    public Customer updateCustomer(Integer id, Customer customer) {
-        return customerRepository.findById(id).map(existing -> {
-            existing.setCustomerName(customer.getCustomerName());
-            existing.setCustomerLastName(customer.getCustomerLastName());
-            existing.setCustomerEmail(customer.getCustomerEmail());
-            existing.setCustomerPassword(customer.getCustomerPassword());
-            existing.setCustomerPhoneNumber(customer.getCustomerPhoneNumber());
-            existing.setRole(customer.getRole());
-            return customerRepository.save(existing);
-        }).orElseThrow(() -> new RuntimeException("Cliente no encontrado con id: " + id));
+    public CustomerResponse updateCustomer(Integer id, CustomerProfileUpdateRequest customer) {
+        return saveProfileChanges(id, customer);
     }
 
     @Override
-    public Customer patchCustomer(Integer id, Customer customer) {
-        Customer customerExist = customerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No existe el producto con el id: " + id));
-        if (customer.getCustomerName() != null) {
-            customerExist.setCustomerName(customer.getCustomerName());
-        }
-        if (customer.getCustomerLastName() != null) {
-            customerExist.setCustomerLastName(customer.getCustomerLastName());
-        }
-        if (customer.getCustomerEmail() != null) {
-            customerExist.setCustomerEmail(customer.getCustomerEmail());
-        }
-        if (customer.getCustomerPassword() != null) {
-            customerExist.setCustomerPassword(customer.getCustomerPassword());
-        }
-        if (customer.getCustomerPhoneNumber() != null) {
-            customerExist.setCustomerPhoneNumber(customer.getCustomerPhoneNumber());
-        }
-        if (customer.getRole() != null) {
-            customerExist.setRole(customer.getRole());
-        }
-        return customerRepository.save(customerExist);
+    public CustomerResponse patchCustomer(Integer id, CustomerProfileUpdateRequest customer) {
+        return saveProfileChanges(id, customer);
     }
 
+    @Override
+    public CustomerResponse updateRole(Integer id, CustomerRoleUpdateRequest request) {
+        if (!resourceAuthorizationService.isAdmin()) {
+            throw new AccessDeniedException("Only admins can change roles");
+        }
+
+        Customer customer = getCustomerEntity(id);
+        String normalizedRole = normalizeRoleName(request.getRole());
+        Role role = roleRepository.findByRoleName(normalizedRole)
+                .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Role not found: " + normalizedRole));
+
+        customer.setRole(role);
+        return CustomerResponse.fromEntity(saveCustomer(customer));
+    }
+
+    @Override
     public void deleteCustomer(Integer id) {
-        customerRepository.deleteById(id);
+        if (!resourceAuthorizationService.isAdmin()) {
+            throw new AccessDeniedException("Only admins can delete customers");
+        }
+
+        Customer customer = getCustomerEntity(id);
+        customerRepository.delete(customer);
+    }
+
+    private CustomerResponse saveProfileChanges(Integer id, CustomerProfileUpdateRequest request) {
+        resourceAuthorizationService.assertCurrentCustomer(id);
+        Customer existing = getCustomerEntity(id);
+
+        String normalizedEmail = normalizeEmail(request.getCustomerEmail());
+        if (normalizedEmail.isEmpty()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Email is required");
+        }
+
+        customerRepository.findByCustomerEmail(normalizedEmail)
+                .filter(other -> !other.getCustomerId().equals(id))
+                .ifPresent(other -> {
+                    throw new ResponseStatusException(BAD_REQUEST, "Email is already in use");
+                });
+
+        existing.setCustomerName(trimToEmpty(request.getCustomerName()));
+        existing.setCustomerLastName(trimToEmpty(request.getCustomerLastName()));
+        existing.setCustomerEmail(normalizedEmail);
+        existing.setCustomerPhoneNumber(trimToNull(request.getCustomerPhoneNumber()));
+
+        return CustomerResponse.fromEntity(saveCustomer(existing));
+    }
+
+    private Customer saveCustomer(Customer customer) {
+        customer.setCustomerPassword(passwordHashingService.encodeIfNeeded(customer.getCustomerPassword()));
+        return customerRepository.save(customer);
+    }
+
+    private Customer getCustomerEntity(Integer id) {
+        return customerRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Customer not found"));
+    }
+
+    private String normalizeRoleName(String role) {
+        String normalized = trimToEmpty(role).toUpperCase();
+        if (normalized.isEmpty()) {
+            throw new ResponseStatusException(BAD_REQUEST, "Role is required");
+        }
+        return normalized.startsWith("ROLE_") ? normalized : "ROLE_" + normalized;
+    }
+
+    private String normalizeEmail(String email) {
+        return trimToEmpty(email).toLowerCase();
+    }
+
+    private String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String trimToNull(String value) {
+        String trimmed = trimToEmpty(value);
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

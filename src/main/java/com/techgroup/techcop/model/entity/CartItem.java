@@ -1,6 +1,8 @@
 package com.techgroup.techcop.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -16,6 +18,8 @@ public class CartItem {
     private Integer cart_item_id;
 
     @Column(name = "quantity")
+    @NotNull(message = "La cantidad es obligatoria")
+    @Min(value = 1, message = "La cantidad debe ser al menos 1")
     private Integer quantity;
 
     @Column(name = "unit_price")
@@ -27,6 +31,8 @@ public class CartItem {
     private Carts cart;
 
     @Column(name = "product_id")
+    @NotNull(message = "El producto es obligatorio")
+    @Min(value = 1, message = "El producto debe ser valido")
     private Integer product_id;
 
     @Column(name = "created_at", nullable = false, updatable = false)

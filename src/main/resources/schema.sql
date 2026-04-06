@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_identifier VARCHAR(255) NOT NULL,
+    action VARCHAR(120) NOT NULL,
+    entity_name VARCHAR(120) NOT NULL,
+    entity_id VARCHAR(120),
+    details VARCHAR(1000),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

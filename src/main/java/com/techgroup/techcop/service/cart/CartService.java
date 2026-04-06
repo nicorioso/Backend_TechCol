@@ -1,16 +1,22 @@
 package com.techgroup.techcop.service.cart;
 
-import com.techgroup.techcop.model.entity.Carts;
-import com.techgroup.techcop.model.entity.CartItem;
+import com.techgroup.techcop.model.dto.AddCartItemRequest;
+import com.techgroup.techcop.model.dto.CartItemResponse;
+import com.techgroup.techcop.model.dto.CartResponse;
+import com.techgroup.techcop.model.dto.CartSummaryResponse;
 
 import java.util.List;
 
 public interface CartService {
 
-    public List<CartItem> getCartItems(Integer customerId);
-    public Carts postCartItem(CartItem id, Integer customerId);
-    public Carts syncCartItems(List<CartItem> items, Integer customerId);
-    //public Carts putCartItem(Carts cartItem);
-    public void deleteCartItem(Integer CartItemId, Integer customerId);
+    List<CartSummaryResponse> getAllCarts();
+
+    List<CartItemResponse> getCartItems(Integer customerId);
+
+    CartResponse postCartItem(AddCartItemRequest request, Integer customerId);
+
+    CartResponse syncCartItems(List<AddCartItemRequest> items, Integer customerId);
+
+    void deleteCartItem(Integer cartItemId, Integer customerId);
 
 }

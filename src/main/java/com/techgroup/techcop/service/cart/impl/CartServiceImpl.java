@@ -1,6 +1,9 @@
 package com.techgroup.techcop.service.cart.impl;
 
 import com.techgroup.techcop.model.dto.AddCartItemRequest;
+import com.techgroup.techcop.model.dto.CartItemResponse;
+import com.techgroup.techcop.model.dto.CartResponse;
+import com.techgroup.techcop.model.dto.CartSummaryResponse;
 import com.techgroup.techcop.model.entity.CartItem;
 import com.techgroup.techcop.model.entity.Carts;
 import com.techgroup.techcop.model.entity.Products;
@@ -9,12 +12,21 @@ import com.techgroup.techcop.repository.CartsRepository;
 import com.techgroup.techcop.repository.ProductsRepository;
 import com.techgroup.techcop.service.cart.CartService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
+@Transactional
 public class CartServiceImpl implements CartService {
 
     private final CartsRepository cartsRepository;
@@ -37,20 +49,31 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public List<CartItem> getCartItems(Integer customerId) {
-        Carts cart = validationService.validateCustomerCart(customerId);
-        return cart.getItems();
+    @Transactional(readOnly = true)
+    public List<CartSummaryResponse> getAllCarts() {
+        return cartsRepository.findAll().stream()
+                .map(CartSummaryResponse::fromEntity)
+                .toList();
     }
 
     @Override
-    public Carts postCartItem(CartItem cartItem, Integer customerId) {
+    @Transactional(readOnly = true)
+    public List<CartItemResponse> getCartItems(Integer customerId) {
+        Carts cart = validationService.validateCustomerCart(customerId);
+        return toCartItemResponses(cart.getItems());
+    }
+
+    @Override
+    public CartResponse postCartItem(AddCartItemRequest request, Integer customerId) {
 
         Carts cart = validationService.validateCustomerCart(customerId);
+        CartItem cartItem = toCartItem(request);
 
         Products product = productsRepository.findById(cartItem.getProduct_id())
-                .orElseThrow(() ->
-                        new RuntimeException("No existe el producto con id " + cartItem.getProduct_id())
-                );
+                .orElseThrow(() -> new ResponseStatusException(
+                        NOT_FOUND,
+                        "No existe el producto con id " + cartItem.getProduct_id()
+                ));
 
         Optional<CartItem> existingItemOpt = cart.getItems().stream()
                 .filter(i -> i.getProduct_id().equals(cartItem.getProduct_id()))
@@ -72,29 +95,30 @@ public class CartServiceImpl implements CartService {
 
         priceService.recalculateTotal(cart);
 
-        return cartsRepository.save(cart);
+        return toCartResponse(cartsRepository.save(cart));
     }
 
     @Override
-    public Carts syncCartItems(List<CartItem> items, Integer customerId) {
+    public CartResponse syncCartItems(List<AddCartItemRequest> items, Integer customerId) {
 
         Carts cart = validationService.validateCustomerCart(customerId);
         List<CartItem> nextItems = new ArrayList<>();
 
-        for (CartItem incomingItem : items == null ? List.<CartItem>of() : items) {
-            if (incomingItem == null || incomingItem.getProduct_id() == null) {
+        for (AddCartItemRequest request : items == null ? List.<AddCartItemRequest>of() : items) {
+            if (request == null || request.getProductId() == null) {
                 continue;
             }
 
-            int quantity = incomingItem.getQuantity() == null ? 0 : incomingItem.getQuantity();
+            int quantity = request.getQuantity() == null ? 0 : request.getQuantity();
             if (quantity <= 0) {
                 continue;
             }
 
-            Products product = productsRepository.findById(incomingItem.getProduct_id())
-                    .orElseThrow(() ->
-                            new RuntimeException("No existe el producto con id " + incomingItem.getProduct_id())
-                    );
+            Products product = productsRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            NOT_FOUND,
+                            "No existe el producto con id " + request.getProductId()
+                    ));
 
             CartItem newItem = new CartItem();
             newItem.setProduct_id(product.getProduct_id());
@@ -109,7 +133,7 @@ public class CartServiceImpl implements CartService {
 
         priceService.recalculateTotal(cart);
 
-        return cartsRepository.save(cart);
+        return toCartResponse(cartsRepository.save(cart));
     }
 
 
@@ -121,7 +145,7 @@ public class CartServiceImpl implements CartService {
         CartItem item = cart.getItems().stream()
                 .filter(i -> i.getCart_item_id().equals(cartItemId))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Item no pertenece al carrito"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Item no pertenece al carrito"));
 
         if (item.getQuantity() > 1) {
             item.setQuantity(item.getQuantity() - 1);
@@ -132,6 +156,33 @@ public class CartServiceImpl implements CartService {
         priceService.recalculateTotal(cart);
 
         cartsRepository.save(cart);
+    }
+
+    private CartItem toCartItem(AddCartItemRequest request) {
+        CartItem cartItem = new CartItem();
+        cartItem.setProduct_id(request.getProductId());
+        cartItem.setQuantity(request.getQuantity());
+        return cartItem;
+    }
+
+    private CartResponse toCartResponse(Carts cart) {
+        return CartResponse.fromEntity(cart, toCartItemResponses(cart.getItems()));
+    }
+
+    private List<CartItemResponse> toCartItemResponses(List<CartItem> items) {
+        List<CartItem> safeItems = items == null ? List.of() : items;
+        List<Integer> productIds = safeItems.stream()
+                .map(CartItem::getProduct_id)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<Integer, Products> productsById = productsRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Products::getId, Function.identity()));
+
+        return safeItems.stream()
+                .map(item -> CartItemResponse.fromEntity(item, productsById.get(item.getProduct_id())))
+                .toList();
     }
 
 }

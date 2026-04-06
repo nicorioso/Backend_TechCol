@@ -1,51 +1,71 @@
 package com.techgroup.techcop.service.auth.impl;
 
+import com.techgroup.techcop.model.dto.RegisterCustomerRequest;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.repository.RoleRepository;
 import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.security.enums.VerificationPurpose;
+import com.techgroup.techcop.security.password.PasswordHashingService;
 import com.techgroup.techcop.service.auth.RegistrationService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class RegistrationServiceImpl implements RegistrationService {
 
     private final CustomerRepository customerRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHashingService passwordHashingService;
     private final RoleRepository roleRepository;
     private final VerificationCodeService verificationCodeService;
 
     public RegistrationServiceImpl(CustomerRepository customerRepository,
-                                   PasswordEncoder passwordEncoder,
+                                   PasswordHashingService passwordHashingService,
                                    RoleRepository roleRepository,
                                    VerificationCodeService verificationCodeService) {
         this.customerRepository = customerRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.passwordHashingService = passwordHashingService;
         this.roleRepository = roleRepository;
         this.verificationCodeService = verificationCodeService;
     }
 
-    public String registerRequest(Customer customer) {
-        String normalizedEmail = customer.getCustomerEmail() == null
+    public String registerRequest(RegisterCustomerRequest request) {
+        String normalizedEmail = request.getCustomerEmail() == null
                 ? ""
-                : customer.getCustomerEmail().trim().toLowerCase();
+                : request.getCustomerEmail().trim().toLowerCase();
 
         if (normalizedEmail.isEmpty()) {
-            throw new RuntimeException("El correo es obligatorio");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El correo es obligatorio");
+        }
+
+        String rawPassword = request.getCustomerPassword() == null
+                ? ""
+                : request.getCustomerPassword().trim();
+
+        if (rawPassword.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contrasena es obligatoria");
         }
 
         if (customerRepository.existsByCustomerEmail(normalizedEmail)) {
-            throw new RuntimeException("Ya existe una cuenta registrada con ese correo");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Ya existe una cuenta registrada con ese correo"
+            );
         }
 
+        Customer customer = new Customer();
+        customer.setCustomerName(trimToEmpty(request.getCustomerName()));
+        customer.setCustomerLastName(trimToEmpty(request.getCustomerLastName()));
         customer.setCustomerEmail(normalizedEmail);
-
-        customer.setCustomerPassword(passwordEncoder.encode(customer.getCustomerPassword()));
+        customer.setCustomerPhoneNumber(trimToEmpty(request.getCustomerPhoneNumber()));
+        customer.setCustomerPassword(passwordHashingService.hashNewPassword(rawPassword));
         customer.setRole(roleRepository.findByRoleName("ROLE_CLIENTE")
-                .orElseThrow());
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "No se pudo resolver el rol por defecto"
+                )));
 
         customerRepository.save(customer);
 
@@ -62,16 +82,20 @@ public class RegistrationServiceImpl implements RegistrationService {
         email = email == null ? "" : email.trim().toLowerCase();
 
         Customer customer = customerRepository.findByCustomerEmail(email)
-                .orElseThrow();
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         boolean valid = verificationCodeService.verifyCode(customer, code);
 
         if (!valid) {
-            throw new RuntimeException("Invalid code");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code");
         }
 
         customerRepository.save(customer);
 
         return "Account verified successfully";
+    }
+
+    private String trimToEmpty(String value) {
+        return value == null ? "" : value.trim();
     }
 }

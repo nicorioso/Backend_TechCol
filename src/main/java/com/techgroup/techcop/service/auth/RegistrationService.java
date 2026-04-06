@@ -1,8 +1,8 @@
 package com.techgroup.techcop.service.auth;
 
-import com.techgroup.techcop.model.entity.Customer;
+import com.techgroup.techcop.model.dto.RegisterCustomerRequest;
 
 public interface RegistrationService {
-    String registerRequest(Customer customer);
+    String registerRequest(RegisterCustomerRequest request);
     String verifyRegister(String email, String code);
 }

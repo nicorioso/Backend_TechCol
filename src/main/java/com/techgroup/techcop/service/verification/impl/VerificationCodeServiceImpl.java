@@ -8,7 +8,9 @@ import com.techgroup.techcop.security.enums.VerificationPurpose;
 import com.techgroup.techcop.service.email.EmailService;
 import com.techgroup.techcop.service.sms.SmsService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -60,7 +62,7 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
                 break;
 
             default:
-                throw new RuntimeException("Invalid channel");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid channel");
         }
     }
 
@@ -69,10 +71,10 @@ public class VerificationCodeServiceImpl implements VerificationCodeService {
 
         VerificationCode verification = repository
                 .findTopByCustomerAndUsedFalseOrderByExpirationTimeDesc(customer)
-                .orElseThrow(() -> new RuntimeException("No active code"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "No active code"));
 
         if (verification.getExpirationTime().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Code expired");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code expired");
         }
 
         if (!verification.getCode().equals(code)) {

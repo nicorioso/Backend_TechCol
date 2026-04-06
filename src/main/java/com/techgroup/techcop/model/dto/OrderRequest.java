@@ -1,13 +1,27 @@
 package com.techgroup.techcop.model.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class OrderRequest {
+    @NotNull(message = "El total del pedido es obligatorio")
+    @PositiveOrZero(message = "El total del pedido no puede ser negativo")
     private BigDecimal orderPrice;
+
+    @NotNull(message = "El cliente es obligatorio")
+    @Positive(message = "El cliente debe ser valido")
     private Integer customerId;
+
     private LocalDateTime orderDate;
+
     private String paypalOrderId;
+
+    @NotBlank(message = "El estado del pedido es obligatorio")
     private String status;
 
     public OrderRequest() {}

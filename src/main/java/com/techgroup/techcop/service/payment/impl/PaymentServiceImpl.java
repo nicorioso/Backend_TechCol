@@ -1,11 +1,13 @@
 package com.techgroup.techcop.service.payment.impl;
 
 import com.techgroup.techcop.model.dto.PaymentCallbackResponse;
+import com.techgroup.techcop.model.dto.PayPalOrderResponse;
 import com.techgroup.techcop.model.entity.*;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.repository.OrderDetailsRepository;
 import com.techgroup.techcop.repository.OrderRepository;
 import com.techgroup.techcop.repository.ProductsRepository;
+import com.techgroup.techcop.service.audit.AuditLogService;
 import com.techgroup.techcop.service.payment.PaymentService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +19,7 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import com.techgroup.techcop.repository.CartsRepository;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +40,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final CartsRepository cartsRepository;
     private final OrderDetailsRepository orderDetailsRepository;
     private final ProductsRepository productsRepository;
+    private final AuditLogService auditLogService;
 
     @Value("${paypal.client-id}")
     private String clientId;
@@ -64,7 +68,8 @@ public class PaymentServiceImpl implements PaymentService {
                               RestTemplate restTemplate,
                               CartsRepository cartsRepository,
                               OrderDetailsRepository orderDetailsRepository,
-                              ProductsRepository productsRepository) {
+                              ProductsRepository productsRepository,
+                              AuditLogService auditLogService) {
 
         this.customerRepository = customerRepository;
         this.orderRepository = orderRepository;
@@ -72,16 +77,17 @@ public class PaymentServiceImpl implements PaymentService {
         this.cartsRepository = cartsRepository;
         this.orderDetailsRepository = orderDetailsRepository;
         this.productsRepository = productsRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Override
-    public Map<String, String> createPayPalOrder() {
+    public PayPalOrderResponse createPayPalOrder() {
 
         Customer customer = getAuthenticatedCustomer();
         Carts cart = getCustomerCart(customer);
 
         if (cart.getItems().isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty");
         }
 
         BigDecimal totalDouble = cart.getCart_price();
@@ -127,14 +133,18 @@ public class PaymentServiceImpl implements PaymentService {
                     Map.class
             );
         } catch (HttpStatusCodeException e) {
-            throw new RuntimeException("PayPal create order failed: " + e.getResponseBodyAsString(), e);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "PayPal create order failed: " + e.getResponseBodyAsString(),
+                    e
+            );
         } catch (Exception e) {
-            throw new RuntimeException("PayPal create order request failed", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal create order request failed", e);
         }
 
         Map<String, Object> responseBody = response.getBody();
         if (responseBody == null || responseBody.get("id") == null) {
-            throw new RuntimeException("PayPal did not return a valid order");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal did not return a valid order");
         }
 
         String orderId = responseBody.get("id").toString();
@@ -171,14 +181,13 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         if (approveUrl == null) {
-            throw new RuntimeException("PayPal order created without approval link. Returned rel values: " + availableRelations);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "PayPal order created without approval link. Returned rel values: " + availableRelations
+            );
         }
 
-        Map<String, String> result = new HashMap<>();
-        result.put("orderId", orderId);
-        result.put("approveUrl", approveUrl);
-
-        return result;
+        return new PayPalOrderResponse(orderId, approveUrl);
     }
 
     @Override
@@ -191,7 +200,7 @@ public class PaymentServiceImpl implements PaymentService {
         Customer customer = getAuthenticatedCustomer();
         Carts cart = getCustomerCart(customer);
         if (cart.getItems().isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty");
         }
 
         String accessToken = getAccessToken();
@@ -211,20 +220,24 @@ public class PaymentServiceImpl implements PaymentService {
                     Map.class
             );
         } catch (HttpStatusCodeException e) {
-            throw new RuntimeException("PayPal capture failed: " + e.getResponseBodyAsString(), e);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "PayPal capture failed: " + e.getResponseBodyAsString(),
+                    e
+            );
         } catch (Exception e) {
-            throw new RuntimeException("PayPal capture request failed", e);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal capture request failed", e);
         }
 
         Map<String, Object> responseBody = response.getBody();
         if (responseBody == null || responseBody.get("status") == null) {
-            throw new RuntimeException("PayPal did not return a valid capture response");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal did not return a valid capture response");
         }
 
         String status = responseBody.get("status").toString();
 
         if (!status.equals("COMPLETED")) {
-            throw new RuntimeException("Payment not completed");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Payment not completed");
         }
 
         BigDecimal totalDouble = cart.getCart_price();
@@ -242,7 +255,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         cart.getItems().forEach(item -> {
             Products product = productsRepository.findById(item.getProduct_id())
-                    .orElseThrow(() -> new RuntimeException("Product not found: " + item.getProduct_id()));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
+                            "Product not found: " + item.getProduct_id()
+                    ));
 
             OrderDetails detail = new OrderDetails();
             detail.setOrder(order);
@@ -261,6 +277,14 @@ public class PaymentServiceImpl implements PaymentService {
         cart.getItems().clear();
         cart.setCart_price(BigDecimal.ZERO);
         cartsRepository.save(cart);
+
+        auditLogService.log(
+                customer.getCustomerEmail(),
+                "PURCHASE_COMPLETED",
+                "ORDER",
+                savedOrder.getOrderId() == null ? null : savedOrder.getOrderId().toString(),
+                "Compra registrada desde PayPal con estado " + savedOrder.getStatus()
+        );
     }
 
     @Override
@@ -307,7 +331,10 @@ public class PaymentServiceImpl implements PaymentService {
 
     private String getAccessToken() {
         if (!hasText(clientId) || !hasText(clientSecret)) {
-            throw new RuntimeException("PayPal credentials are missing. Configure PAYPAL_ID and PAYPAL_SECRET in the backend environment.");
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "PayPal credentials are missing. Configure PAYPAL_ID and PAYPAL_SECRET in the backend environment."
+            );
         }
 
         String auth = clientId + ":" + clientSecret;
@@ -332,17 +359,22 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (HttpStatusCodeException e) {
             String responseBody = e.getResponseBodyAsString();
             String details = hasText(responseBody) ? responseBody : e.getStatusText();
-            throw new RuntimeException(
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
                     "PayPal token request failed (" + e.getStatusCode().value() + "): " + details,
                     e
             );
         } catch (Exception e) {
-            throw new RuntimeException("PayPal token request could not reach the API. Verify paypal.base-url and credentials.", e);
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "PayPal token request could not reach the API. Verify paypal.base-url and credentials.",
+                    e
+            );
         }
 
         Map<String, Object> responseBody = response.getBody();
         if (responseBody == null || responseBody.get("access_token") == null) {
-            throw new RuntimeException("PayPal did not return an access token");
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "PayPal did not return an access token");
         }
 
         return responseBody.get("access_token").toString();
@@ -357,12 +389,12 @@ public class PaymentServiceImpl implements PaymentService {
 
         return customerRepository
                 .findByCustomerEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
     }
 
     private Carts getCustomerCart(Customer customer) {
         return cartsRepository.findByCustomer(customer)
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cart not found"));
     }
 
     private boolean hasText(String value) {

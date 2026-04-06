@@ -10,19 +10,25 @@ import com.techgroup.techcop.repository.RoleRepository;
 import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.security.enums.VerificationPurpose;
 import com.techgroup.techcop.security.jwt.JwtService;
+import com.techgroup.techcop.security.password.PasswordHashingService;
+import com.techgroup.techcop.service.audit.AuditLogService;
 import com.techgroup.techcop.service.auth.AuthenticationService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -39,8 +45,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AuthenticationManager authManager;
     private final VerificationCodeService verificationCodeService;
     private final RestTemplate restTemplate;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHashingService passwordHashingService;
+    private final AuditLogService auditLogService;
     private final String googleClientId;
+    private final boolean refreshCookieSecure;
+    private final Environment environment;
 
     public AuthenticationServiceImpl(CustomerRepository customerRepository,
                                      RoleRepository roleRepository,
@@ -48,16 +57,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                                      AuthenticationManager authManager,
                                      VerificationCodeService verificationCodeService,
                                      RestTemplate restTemplate,
-                                     PasswordEncoder passwordEncoder,
-                                     @Value("${google.client-id:}") String googleClientId) {
+                                     PasswordHashingService passwordHashingService,
+                                     AuditLogService auditLogService,
+                                     @Value("${google.client-id:}") String googleClientId,
+                                     @Value("${app.security.refresh-cookie.secure:false}") boolean refreshCookieSecure,
+                                     Environment environment) {
         this.customerRepository = customerRepository;
         this.roleRepository = roleRepository;
         this.jwtService = jwtService;
         this.authManager = authManager;
         this.verificationCodeService = verificationCodeService;
         this.restTemplate = restTemplate;
-        this.passwordEncoder = passwordEncoder;
+        this.passwordHashingService = passwordHashingService;
+        this.auditLogService = auditLogService;
         this.googleClientId = googleClientId;
+        this.refreshCookieSecure = refreshCookieSecure;
+        this.environment = environment;
     }
 
     @Override
@@ -76,19 +91,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public String login(String email, String password, String channel) {
 
         email = normalizeEmail(email);
+        upgradeLegacyPasswordIfNeeded(email, password);
 
         try {
             authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, password)
             );
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Error autenticando: " + e.getMessage());
+        } catch (AuthenticationException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Correo o contrasena incorrectos."
+            );
         }
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         verificationCodeService.generateAndSendCode(
                 customer,
@@ -97,6 +115,18 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         );
 
         return "Verification code sent via " + channel;
+    }
+
+    private void upgradeLegacyPasswordIfNeeded(String email, String rawPassword) {
+        customerRepository.findByCustomerEmail(email)
+                .ifPresent(customer -> {
+                    String storedPassword = customer.getCustomerPassword();
+                    if (!passwordHashingService.isBcryptHash(storedPassword)
+                            && passwordHashingService.matches(rawPassword, storedPassword)) {
+                        customer.setCustomerPassword(passwordHashingService.encodeIfNeeded(storedPassword));
+                        customerRepository.save(customer);
+                    }
+                });
     }
 
     @Override
@@ -108,15 +138,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         boolean valid = verificationCodeService.verifyCode(customer, code);
 
         if (!valid) {
-            throw new RuntimeException("Invalid code");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code");
         }
 
-        return createAuthResponse(customer, response, true);
+        AuthResponse authResponse = createAuthResponse(customer, response, true);
+        auditLogService.log(
+                customer.getCustomerEmail(),
+                "LOGIN_SUCCESS",
+                "CUSTOMER",
+                customer.getCustomerId() == null ? null : customer.getCustomerId().toString(),
+                "Inicio de sesion completado mediante verificacion OTP"
+        );
+        return authResponse;
     }
 
     @Override
@@ -124,7 +162,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                                                HttpServletResponse response) {
 
         if (googleClientId == null || googleClientId.isBlank()) {
-            throw new RuntimeException("Google login is not configured");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Google login is not configured");
         }
 
         GoogleTokenInfo tokenInfo = restTemplate.getForObject(
@@ -134,15 +172,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         );
 
         if (tokenInfo == null || isBlank(tokenInfo.getEmail())) {
-            throw new RuntimeException("Invalid Google credential");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid Google credential");
         }
 
         if (!googleClientId.equals(tokenInfo.getAud())) {
-            throw new RuntimeException("Google credential audience mismatch");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Google credential audience mismatch");
         }
 
         if (!"true".equalsIgnoreCase(tokenInfo.getEmailVerified())) {
-            throw new RuntimeException("Google email is not verified");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Google email is not verified");
         }
 
         Customer customer = customerRepository
@@ -150,14 +188,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .map(existing -> mergeGoogleProfile(existing, tokenInfo))
                 .orElseGet(() -> createGoogleCustomer(tokenInfo));
 
-        return createAuthResponse(customer, response, true);
+        AuthResponse authResponse = createAuthResponse(customer, response, true);
+        auditLogService.log(
+                customer.getCustomerEmail(),
+                "GOOGLE_LOGIN_SUCCESS",
+                "CUSTOMER",
+                customer.getCustomerId() == null ? null : customer.getCustomerId().toString(),
+                "Inicio de sesion completado con Google OAuth"
+        );
+        return authResponse;
     }
 
     @Override
     public AuthResponse refresh(HttpServletRequest request) {
 
         if (request.getCookies() == null) {
-            throw new RuntimeException("No refresh token");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No refresh token");
         }
 
         String refreshToken = Arrays.stream(request.getCookies())
@@ -167,7 +213,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .orElse(null);
 
         if (refreshToken == null || jwtService.isTokenExpired(refreshToken)) {
-            throw new RuntimeException("Invalid refresh token");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
 
         String email = jwtService.extractUsername(refreshToken);
@@ -175,7 +221,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
         return createAuthResponse(customer, null, false);
     }
@@ -185,9 +231,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(isRefreshCookieSecure())
                 .path("/")
                 .maxAge(0)
+                .sameSite("Strict")
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
@@ -221,7 +268,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         customer.setCustomerName(defaultIfBlank(tokenInfo.getGivenName(), tokenInfo.getName()));
         customer.setCustomerLastName(defaultIfBlank(tokenInfo.getFamilyName(), ""));
         customer.setCustomerPhoneNumber("");
-        customer.setCustomerPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+        customer.setCustomerPassword(passwordHashingService.hashNewPassword(UUID.randomUUID().toString()));
         customer.setRole(resolveCustomerRole());
 
         return customerRepository.save(customer);
@@ -229,7 +276,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private Role resolveCustomerRole() {
         return roleRepository.findByRoleName("ROLE_CLIENTE")
-                .orElseThrow(() -> new RuntimeException("Rol no encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Rol no encontrado"
+                ));
     }
 
     private AuthResponse createAuthResponse(Customer customer,
@@ -244,7 +294,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                     .httpOnly(true)
-                    .secure(false)
+                    .secure(isRefreshCookieSecure())
                     .path("/")
                     .maxAge(7 * 24 * 60 * 60)
                     .sameSite("Strict")
@@ -276,5 +326,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private String normalizeEmail(String email) {
         return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    private boolean isRefreshCookieSecure() {
+        return refreshCookieSecure || environment.acceptsProfiles(Profiles.of("prod"));
     }
 }
