@@ -29,8 +29,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -69,6 +71,69 @@ class AuthControllerRecaptchaTest {
 
     @MockBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @Test
+    void shouldForwardRecaptchaTokenOnLoginJson() throws Exception {
+        when(authenticationService.login("user@test.com", "Secret123!", "EMAIL"))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "user@test.com",
+                                  "password": "Secret123!",
+                                  "channel": "EMAIL",
+                                  "recaptchaToken": "login-captcha"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        verify(recaptchaService).validate(eq("login-captcha"), any(), eq("login"));
+        verify(authenticationService).login("user@test.com", "Secret123!", "EMAIL");
+    }
+
+    @Test
+    void shouldReadRecaptchaAliasOnLoginJson() throws Exception {
+        when(authenticationService.login("user@test.com", "Secret123!", "EMAIL"))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "user@test.com",
+                                  "password": "Secret123!",
+                                  "channel": "EMAIL",
+                                  "g-recaptcha-response": "login-alias-token"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        verify(recaptchaService).validate(eq("login-alias-token"), any(), eq("login"));
+    }
+
+    @Test
+    void shouldForwardRecaptchaTokenOnRegister() throws Exception {
+        when(registrationService.registerRequest(any())).thenReturn("Verification code sent");
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "customerName": "Test",
+                                  "customerLastName": "User",
+                                  "customerEmail": "user@test.com",
+                                  "customerPassword": "Secret123!",
+                                  "customerPhoneNumber": "+573001112233",
+                                  "g-recaptcha-response": "register-token"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Verification code sent"));
+
+        verify(recaptchaService).validate(eq("register-token"), any(), eq("register"));
+    }
 
     @Test
     void shouldForwardRecaptchaTokenOnForgotPassword() throws Exception {
@@ -142,6 +207,16 @@ class AuthControllerRecaptchaTest {
                         ))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Captcha invalido o expirado."));
+    }
+
+    @Test
+    void shouldAllowCredentialedCorsOnAuthLoginPreflight() throws Exception {
+        mockMvc.perform(options("/auth/login")
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
     }
 
     private record PasswordRecoveryRequestBody(

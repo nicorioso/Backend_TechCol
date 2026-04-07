@@ -7,6 +7,7 @@ import java.util.List;
 public class RecaptchaVerificationResponse {
 
     private boolean success;
+    private String hostname;
 
     @JsonProperty("error-codes")
     private List<String> errorCodes;
@@ -17,6 +18,14 @@ public class RecaptchaVerificationResponse {
 
     public void setSuccess(boolean success) {
         this.success = success;
+    }
+
+    public String getHostname() {
+        return hostname;
+    }
+
+    public void setHostname(String hostname) {
+        this.hostname = hostname;
     }
 
     public List<String> getErrorCodes() {

@@ -17,6 +17,8 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 public class RecaptchaService {
 
@@ -75,20 +77,31 @@ public class RecaptchaService {
                     RecaptchaVerificationResponse.class
             );
 
-            if (verification == null || !verification.isSuccess()) {
-                log.warn(
-                        "reCAPTCHA invalido para el flujo {} desde IP {}. Errores: {}",
-                        flowName,
-                        clientIp,
-                        verification != null ? verification.getErrorCodes() : "sin respuesta"
-                );
+            if (verification == null) {
+                log.error("Google reCAPTCHA respondio vacio para el flujo {} desde IP {}", flowName, clientIp);
                 throw new ResponseStatusException(
-                        HttpStatus.FORBIDDEN,
-                        "Captcha invalido o expirado. Marca de nuevo 'No soy un robot'."
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        "No fue posible validar reCAPTCHA en este momento."
                 );
             }
 
-            log.info("reCAPTCHA valido para flujo {} desde IP {}", flowName, clientIp);
+            if (!verification.isSuccess()) {
+                log.warn(
+                        "reCAPTCHA invalido para el flujo {} desde IP {}. hostname={}, errores={}",
+                        flowName,
+                        clientIp,
+                        verification.getHostname(),
+                        verification.getErrorCodes()
+                );
+                throw mapVerificationFailure(verification);
+            }
+
+            log.info(
+                    "reCAPTCHA valido para flujo {} desde IP {}. hostname={}",
+                    flowName,
+                    clientIp,
+                    verification.getHostname()
+            );
         } catch (RestClientException ex) {
             log.error("No fue posible validar reCAPTCHA para el flujo {} desde IP {}", flowName, clientIp, ex);
             throw new ResponseStatusException(
@@ -109,5 +122,56 @@ public class RecaptchaService {
 
         String trimmed = token.trim();
         return trimmed.substring(0, Math.min(12, trimmed.length())) + "...";
+    }
+
+    private ResponseStatusException mapVerificationFailure(RecaptchaVerificationResponse verification) {
+        List<String> errorCodes = verification.getErrorCodes();
+
+        if (errorCodes == null || errorCodes.isEmpty()) {
+            return new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Captcha invalido o expirado. Marca de nuevo 'No soy un robot'."
+            );
+        }
+
+        if (errorCodes.contains("timeout-or-duplicate")) {
+            return new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "El reCAPTCHA expiro o ya fue usado. Marca de nuevo 'No soy un robot'."
+            );
+        }
+
+        if (errorCodes.contains("missing-input-response")) {
+            return new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Debes completar el reCAPTCHA."
+            );
+        }
+
+        if (errorCodes.contains("invalid-input-response")) {
+            return new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "El token de reCAPTCHA no es valido. Marca de nuevo 'No soy un robot'."
+            );
+        }
+
+        if (errorCodes.contains("missing-input-secret") || errorCodes.contains("invalid-input-secret")) {
+            return new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "reCAPTCHA no esta configurado correctamente en el servidor."
+            );
+        }
+
+        if (errorCodes.contains("bad-request")) {
+            return new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Google reCAPTCHA rechazo la validacion. Intenta de nuevo."
+            );
+        }
+
+        return new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "Captcha invalido o expirado. Marca de nuevo 'No soy un robot'."
+        );
     }
 }
