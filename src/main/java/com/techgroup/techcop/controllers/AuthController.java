@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -30,15 +31,18 @@ public class AuthController {
     private final RegistrationService registrationService;
     private final ChangePasswordService changePasswordService;
     private final RecaptchaService recaptchaService;
+    private final String recaptchaSiteKey;
 
     public AuthController(AuthenticationService authenticationService,
                           RegistrationService registrationService,
                           ChangePasswordService changePasswordService,
-                          RecaptchaService recaptchaService) {
+                          RecaptchaService recaptchaService,
+                          @Value("${recaptcha.site-key:}") String recaptchaSiteKey) {
         this.authenticationService = authenticationService;
         this.registrationService = registrationService;
         this.changePasswordService = changePasswordService;
         this.recaptchaService = recaptchaService;
+        this.recaptchaSiteKey = recaptchaSiteKey;
     }
 
     @Operation(summary = "Iniciar registro de usuario")
@@ -56,6 +60,14 @@ public class AuthController {
     public ResponseEntity<GoogleClientConfigResponse> googleClientConfig() {
         return ResponseEntity.ok(
                 new GoogleClientConfigResponse(authenticationService.getGoogleClientId())
+        );
+    }
+
+    @Operation(summary = "Obtener la configuracion publica de reCAPTCHA")
+    @GetMapping("/recaptcha/config")
+    public ResponseEntity<RecaptchaConfigResponse> recaptchaConfig() {
+        return ResponseEntity.ok(
+                new RecaptchaConfigResponse(normalize(recaptchaSiteKey))
         );
     }
 
