@@ -89,12 +89,27 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private String resolvePolicy(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
+        String method = request.getMethod();
         String contextPath = request.getContextPath() == null ? "" : request.getContextPath();
         String loginPath = contextPath + "/auth/login";
         String apiPrefix = contextPath + "/";
+        String paypalPrefix = contextPath + "/paypal/";
+        String productsPrefix = contextPath + "/products/";
+        String uploadsPrefix = contextPath + "/uploads/";
 
         if (requestUri.equals(loginPath)) {
             return LOGIN_POLICY;
+        }
+
+        if (requestUri.startsWith(paypalPrefix)) {
+            return null;
+        }
+
+        if ("GET".equalsIgnoreCase(method)
+                && (requestUri.equals(contextPath + "/products")
+                || requestUri.startsWith(productsPrefix)
+                || requestUri.startsWith(uploadsPrefix))) {
+            return null;
         }
 
         if (requestUri.startsWith(apiPrefix)) {
