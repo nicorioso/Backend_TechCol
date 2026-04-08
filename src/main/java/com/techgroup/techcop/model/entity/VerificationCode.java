@@ -1,5 +1,7 @@
 package com.techgroup.techcop.model.entity;
 
+import com.techgroup.techcop.security.enums.VerificationChannel;
+import com.techgroup.techcop.security.enums.VerificationPurpose;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -23,6 +25,14 @@ public class VerificationCode {
 
     @Column(name = "attempts")
     private int attempts;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "channel", length = 16)
+    private VerificationChannel channel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purpose", length = 32)
+    private VerificationPurpose purpose;
 
     @ManyToOne
     @JoinColumn(name = "customer_id")
@@ -77,6 +87,22 @@ public class VerificationCode {
 
     public void setAttempts(int attempts) {
         this.attempts = attempts;
+    }
+
+    public VerificationChannel getChannel() {
+        return channel;
+    }
+
+    public void setChannel(VerificationChannel channel) {
+        this.channel = channel;
+    }
+
+    public VerificationPurpose getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(VerificationPurpose purpose) {
+        this.purpose = purpose;
     }
 
     public Customer getCustomer() {

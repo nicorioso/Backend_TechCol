@@ -8,11 +8,13 @@ public interface AuthenticationService {
 
     String getGoogleClientId();
 
-    boolean accountExists(String email);
+    boolean accountExists(String identifier, String channel);
 
-    String login(String email, String password, String channel);
+    String login(String identifier, String password, String channel);
 
-    AuthResponse verifyCode(String email, String code,
+    AuthResponse verifyCode(String identifier,
+                            String channel,
+                            String code,
                             HttpServletResponse response);
 
     AuthResponse authenticateWithGoogle(String credential,

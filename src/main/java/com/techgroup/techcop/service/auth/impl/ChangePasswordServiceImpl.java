@@ -7,6 +7,7 @@ import com.techgroup.techcop.security.enums.VerificationPurpose;
 import com.techgroup.techcop.security.password.PasswordHashingService;
 import com.techgroup.techcop.service.audit.AuditLogService;
 import com.techgroup.techcop.service.auth.ChangePasswordService;
+import com.techgroup.techcop.service.auth.support.AuthIdentityService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,25 +20,28 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
     private final PasswordHashingService passwordHashingService;
     private final VerificationCodeService verificationCodeService;
     private final AuditLogService auditLogService;
+    private final AuthIdentityService authIdentityService;
 
     public ChangePasswordServiceImpl(CustomerRepository customerRepository,
                                      PasswordHashingService passwordHashingService,
                                      VerificationCodeService verificationCodeService,
-                                     AuditLogService auditLogService) {
+                                     AuditLogService auditLogService,
+                                     AuthIdentityService authIdentityService) {
         this.customerRepository = customerRepository;
         this.passwordHashingService = passwordHashingService;
         this.verificationCodeService = verificationCodeService;
         this.auditLogService = auditLogService;
+        this.authIdentityService = authIdentityService;
     }
 
     @Override
     public String changePasswordAuthenticate(String email, String password, String channel) {
-        email = normalizeEmail(email);
-        Customer customer = getCustomerByEmail(email);
+        String normalizedEmail = authIdentityService.normalizeEmail(email);
+        Customer customer = getCustomerByEmail(normalizedEmail);
         ensureCurrentPasswordMatches(password, customer);
         upgradeLegacyPasswordHash(customer);
-        VerificationChannel verificationChannel = parseChannel(channel);
 
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
         verificationCodeService.generateAndSendCode(
                 customer,
                 verificationChannel,
@@ -48,11 +52,17 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
     }
 
     @Override
-    public String changePasswordVerifiCode(String email, String code) {
-        email = normalizeEmail(email);
-        Customer customer = getCustomerByEmail(email);
+    public String changePasswordVerifiCode(String email, String code, String channel) {
+        String normalizedEmail = authIdentityService.normalizeEmail(email);
+        Customer customer = getCustomerByEmail(normalizedEmail);
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
 
-        boolean valid = verificationCodeService.verifyCode(customer, code);
+        boolean valid = verificationCodeService.verifyCode(
+                customer,
+                code,
+                verificationChannel,
+                VerificationPurpose.CHANGE_PASSWORD
+        );
 
         if (!valid) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code");
@@ -66,8 +76,8 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
 
     @Override
     public String changePassword(String email, String newPassword) {
-        email = normalizeEmail(email);
-        Customer customer = getCustomerByEmail(email);
+        String normalizedEmail = authIdentityService.normalizeEmail(email);
+        Customer customer = getCustomerByEmail(normalizedEmail);
 
         if (customer.isPasswordRsetVerified()) {
             customer.setCustomerPassword(passwordHashingService.hashNewPassword(newPassword));
@@ -81,15 +91,15 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
                     "Cambio de contrasena autenticado por el usuario"
             );
             return "Change password successful";
-        } else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verification required");
         }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verification required");
     }
 
     @Override
     public String requestPasswordRecovery(String identifier, String channel) {
-        VerificationChannel verificationChannel = parseChannel(channel);
-        Customer customer = getCustomerByIdentifier(identifier, verificationChannel);
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+        Customer customer = authIdentityService.getCustomerByIdentifier(identifier, verificationChannel);
 
         verificationCodeService.generateAndSendCode(
                 customer,
@@ -102,10 +112,15 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
 
     @Override
     public String verifyPasswordRecoveryCode(String identifier, String channel, String code) {
-        VerificationChannel verificationChannel = parseChannel(channel);
-        Customer customer = getCustomerByIdentifier(identifier, verificationChannel);
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+        Customer customer = authIdentityService.getCustomerByIdentifier(identifier, verificationChannel);
 
-        boolean valid = verificationCodeService.verifyCode(customer, code);
+        boolean valid = verificationCodeService.verifyCode(
+                customer,
+                code,
+                verificationChannel,
+                VerificationPurpose.CHANGE_PASSWORD
+        );
 
         if (!valid) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code");
@@ -119,8 +134,8 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
 
     @Override
     public String resetPasswordByRecovery(String identifier, String channel, String newPassword) {
-        VerificationChannel verificationChannel = parseChannel(channel);
-        Customer customer = getCustomerByIdentifier(identifier, verificationChannel);
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+        Customer customer = authIdentityService.getCustomerByIdentifier(identifier, verificationChannel);
 
         if (customer.isPasswordRsetVerified()) {
             customer.setCustomerPassword(passwordHashingService.hashNewPassword(newPassword));
@@ -134,9 +149,9 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
                     "Contrasena restablecida por flujo de recuperacion"
             );
             return "Change password successful";
-        } else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verification required");
         }
+
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verification required");
     }
 
     private void ensureCurrentPasswordMatches(String rawPassword, Customer customer) {
@@ -159,42 +174,5 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
         return customerRepository
                 .findByCustomerEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-    }
-
-    private Customer getCustomerByIdentifier(String identifier, VerificationChannel channel) {
-        String normalizedIdentifier = normalizeIdentifier(identifier, channel);
-
-        return switch (channel) {
-            case EMAIL -> customerRepository.findByCustomerEmail(normalizedIdentifier)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-            case SMS -> customerRepository.findByCustomerPhoneNumber(normalizedIdentifier)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        };
-    }
-
-    private VerificationChannel parseChannel(String channel) {
-        if (channel == null || channel.trim().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification channel is required");
-        }
-
-        try {
-            return VerificationChannel.valueOf(channel.trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification channel", ex);
-        }
-    }
-
-    private String normalizeIdentifier(String identifier, VerificationChannel channel) {
-        String value = identifier == null ? "" : identifier.trim();
-
-        if (value.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identifier is required");
-        }
-
-        return channel == VerificationChannel.EMAIL ? normalizeEmail(value) : value;
-    }
-
-    private String normalizeEmail(String email) {
-        return email == null ? "" : email.trim().toLowerCase();
     }
 }

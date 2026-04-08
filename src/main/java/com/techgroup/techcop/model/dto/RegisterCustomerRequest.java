@@ -35,6 +35,12 @@ public class RegisterCustomerRequest {
     @NotBlank(message = "Debes completar el reCAPTCHA")
     private String recaptchaToken;
 
+    @Pattern(
+            regexp = "(?i)^(EMAIL|SMS)?$",
+            message = "El canal debe ser EMAIL o SMS"
+    )
+    private String channel;
+
     public String getCustomerName() {
         return customerName;
     }
@@ -81,5 +87,13 @@ public class RegisterCustomerRequest {
 
     public void setRecaptchaToken(String recaptchaToken) {
         this.recaptchaToken = recaptchaToken;
+    }
+
+    public String getChannel() {
+        return channel;
+    }
+
+    public void setChannel(String channel) {
+        this.channel = channel;
     }
 }

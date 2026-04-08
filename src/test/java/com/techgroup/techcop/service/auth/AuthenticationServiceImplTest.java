@@ -10,6 +10,7 @@ import com.techgroup.techcop.security.jwt.JwtService;
 import com.techgroup.techcop.security.password.PasswordHashingService;
 import com.techgroup.techcop.service.audit.AuditLogService;
 import com.techgroup.techcop.service.auth.impl.AuthenticationServiceImpl;
+import com.techgroup.techcop.service.auth.support.AuthIdentityService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -63,11 +65,17 @@ class AuthenticationServiceImplTest {
     @Mock
     private AuditLogService auditLogService;
 
+    @Mock
+    private AuthIdentityService authIdentityService;
+
     @Test
     void shouldLoginSuccessfullyAndSendVerificationCode() {
         AuthenticationServiceImpl service = buildService(false);
         Customer customer = buildCustomer();
 
+        when(authIdentityService.parseChannel("EMAIL", VerificationChannel.EMAIL)).thenReturn(VerificationChannel.EMAIL);
+        when(authIdentityService.resolveAuthenticationEmail("USER@TECHCOL.COM", VerificationChannel.EMAIL))
+                .thenReturn("user@techcol.com");
         when(customerRepository.findByCustomerEmail("user@techcol.com")).thenReturn(Optional.of(customer));
         when(passwordHashingService.isBcryptHash("stored-hash")).thenReturn(true);
         when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
@@ -83,10 +91,59 @@ class AuthenticationServiceImplTest {
     }
 
     @Test
+    void shouldLoginWithSmsByResolvingCustomerEmailInternally() {
+        AuthenticationServiceImpl service = buildService(false);
+        Customer customer = buildCustomer();
+        customer.setCustomerPhoneNumber("+573001112233");
+
+        when(authIdentityService.parseChannel("SMS", VerificationChannel.EMAIL)).thenReturn(VerificationChannel.SMS);
+        when(authIdentityService.resolveAuthenticationEmail("+573001112233", VerificationChannel.SMS))
+                .thenReturn("user@techcol.com");
+        when(customerRepository.findByCustomerEmail("user@techcol.com")).thenReturn(Optional.of(customer));
+        when(passwordHashingService.isBcryptHash("stored-hash")).thenReturn(true);
+        when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
+
+        String result = service.login("+573001112233", "secret123", "SMS");
+
+        assertThat(result).isEqualTo("Verification code sent via SMS");
+        verify(verificationCodeService).generateAndSendCode(
+                customer,
+                VerificationChannel.SMS,
+                VerificationPurpose.LOGIN
+        );
+    }
+
+    @Test
+    void shouldRejectLoginWhenAccountIsNotVerified() {
+        AuthenticationServiceImpl service = buildService(false);
+        Customer customer = buildCustomer();
+        customer.setAccountVerified(false);
+
+        when(authIdentityService.parseChannel("EMAIL", VerificationChannel.EMAIL)).thenReturn(VerificationChannel.EMAIL);
+        when(authIdentityService.resolveAuthenticationEmail("user@techcol.com", VerificationChannel.EMAIL))
+                .thenReturn("user@techcol.com");
+        when(customerRepository.findByCustomerEmail("user@techcol.com")).thenReturn(Optional.of(customer));
+        when(passwordHashingService.isBcryptHash("stored-hash")).thenReturn(true);
+        when(authenticationManager.authenticate(any())).thenReturn(mock(Authentication.class));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.login("user@techcol.com", "secret123", "EMAIL")
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(403);
+        assertThat(exception.getReason()).isEqualTo("La cuenta aun no ha sido verificada.");
+        verify(verificationCodeService, never()).generateAndSendCode(any(), any(), any());
+    }
+
+    @Test
     void shouldRejectLoginWhenCredentialsAreInvalid() {
         AuthenticationServiceImpl service = buildService(false);
         Customer customer = buildCustomer();
 
+        when(authIdentityService.parseChannel("EMAIL", VerificationChannel.EMAIL)).thenReturn(VerificationChannel.EMAIL);
+        when(authIdentityService.resolveAuthenticationEmail("user@techcol.com", VerificationChannel.EMAIL))
+                .thenReturn("user@techcol.com");
         when(customerRepository.findByCustomerEmail("user@techcol.com")).thenReturn(Optional.of(customer));
         when(passwordHashingService.isBcryptHash("stored-hash")).thenReturn(true);
         when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("bad credentials"));
@@ -99,6 +156,35 @@ class AuthenticationServiceImplTest {
         assertThat(exception.getStatusCode().value()).isEqualTo(401);
         assertThat(exception.getReason()).isEqualTo("Correo o contrasena incorrectos.");
         verify(verificationCodeService, never()).generateAndSendCode(any(), any(), any());
+    }
+
+    @Test
+    void shouldVerifyLoginCodeWithRequestedChannel() {
+        AuthenticationServiceImpl service = buildService(false);
+        Customer customer = buildCustomer();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(authIdentityService.parseChannel("SMS", VerificationChannel.EMAIL)).thenReturn(VerificationChannel.SMS);
+        when(authIdentityService.getCustomerByIdentifier("+573001112233", VerificationChannel.SMS)).thenReturn(customer);
+        when(verificationCodeService.verifyCode(
+                customer,
+                "123456",
+                VerificationChannel.SMS,
+                VerificationPurpose.LOGIN
+        )).thenReturn(true);
+        when(jwtService.generateAccessToken("user@techcol.com", "ROLE_CLIENTE")).thenReturn("access-token");
+        when(jwtService.generateRefreshToken("user@techcol.com")).thenReturn("refresh-token");
+
+        var authResponse = service.verifyCode("+573001112233", "SMS", "123456", response);
+
+        assertThat(authResponse.getAccessToken()).isEqualTo("access-token");
+        verify(verificationCodeService).verifyCode(
+                customer,
+                "123456",
+                VerificationChannel.SMS,
+                VerificationPurpose.LOGIN
+        );
+        assertThat(response.getHeader(HttpHeaders.SET_COOKIE)).contains("refreshToken=refresh-token");
     }
 
     @Test
@@ -143,6 +229,7 @@ class AuthenticationServiceImplTest {
                 restTemplate,
                 passwordHashingService,
                 auditLogService,
+                authIdentityService,
                 "google-client-id",
                 secureCookie,
                 new MockEnvironment()
