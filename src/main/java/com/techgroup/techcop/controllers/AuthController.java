@@ -12,11 +12,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @Validated
@@ -30,15 +31,18 @@ public class AuthController {
     private final RegistrationService registrationService;
     private final ChangePasswordService changePasswordService;
     private final RecaptchaService recaptchaService;
+    private final String recaptchaSiteKey;
 
     public AuthController(AuthenticationService authenticationService,
                           RegistrationService registrationService,
                           ChangePasswordService changePasswordService,
-                          RecaptchaService recaptchaService) {
+                          RecaptchaService recaptchaService,
+                          @Value("${recaptcha.site-key:}") String recaptchaSiteKey) {
         this.authenticationService = authenticationService;
         this.registrationService = registrationService;
         this.changePasswordService = changePasswordService;
         this.recaptchaService = recaptchaService;
+        this.recaptchaSiteKey = recaptchaSiteKey;
     }
 
     @Operation(summary = "Iniciar registro de usuario")
@@ -51,6 +55,19 @@ public class AuthController {
         );
     }
 
+    @Operation(summary = "Reenviar el codigo de verificacion del registro")
+    @PostMapping("/register/resend-code")
+    public ResponseEntity<?> resendRegisterCode(@Valid @RequestBody VerificationCodeResendRequest request,
+                                                HttpServletRequest servletRequest) {
+        recaptchaService.validate(request.getRecaptchaToken(), servletRequest, "register-resend");
+        return ResponseEntity.ok(
+                registrationService.resendRegisterCode(
+                        request.getIdentifier(),
+                        request.getChannel()
+                )
+        );
+    }
+
     @Operation(summary = "Obtener la configuracion publica de Google OAuth")
     @GetMapping("/google/client-config")
     public ResponseEntity<GoogleClientConfigResponse> googleClientConfig() {
@@ -59,12 +76,20 @@ public class AuthController {
         );
     }
 
-    @Operation(summary = "Verificar si ya existe una cuenta para un correo")
+    @Operation(summary = "Obtener la configuracion publica de reCAPTCHA")
+    @GetMapping("/recaptcha/config")
+    public ResponseEntity<RecaptchaConfigResponse> recaptchaConfig() {
+        return ResponseEntity.ok(
+                new RecaptchaConfigResponse(normalize(recaptchaSiteKey))
+        );
+    }
+
+    @Operation(summary = "Verificar si ya existe una cuenta para un identificador")
     @PostMapping("/account-exists")
     public ResponseEntity<AccountExistsResponse> accountExists(@Valid @RequestBody AccountExistsRequest request) {
         return ResponseEntity.ok(
                 new AccountExistsResponse(
-                        authenticationService.accountExists(request.getEmail())
+                        authenticationService.accountExists(request.getIdentifier(), request.getChannel())
                 )
         );
     }
@@ -74,13 +99,14 @@ public class AuthController {
     public ResponseEntity<?> verifiRegister(@Valid @RequestBody RegisterRequest registerRequest) {
         return ResponseEntity.ok(
                 registrationService.verifyRegister(
-                        registerRequest.getEmail(),
+                        registerRequest.getIdentifier(),
+                        registerRequest.getChannel(),
                         registerRequest.getCode()
                 )
         );
     }
 
-    @Operation(summary = "Solicitar login con correo, contrasena y reCAPTCHA")
+    @Operation(summary = "Solicitar login con identificador, contrasena y reCAPTCHA")
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> loginJson(@Valid @RequestBody LoginRequest request,
                                        HttpServletRequest servletRequest) {
@@ -112,7 +138,7 @@ public class AuthController {
 
     @Operation(summary = "Validar credenciales antes de iniciar el cambio de contrasena")
     @PostMapping("/changePasswordAuthen")
-    public ResponseEntity<?> changePasswordAuthenticate (@Valid @RequestBody LoginRequest login) {
+    public ResponseEntity<?> changePasswordAuthenticate(@Valid @RequestBody LoginRequest login) {
         String channel = normalize(login.getChannel());
         return ResponseEntity.ok(
                 changePasswordService.changePasswordAuthenticate(
@@ -125,18 +151,20 @@ public class AuthController {
 
     @Operation(summary = "Verificar el codigo para habilitar el cambio de contrasena")
     @PostMapping("/changePasswordVerifiCode")
-    public ResponseEntity<?> changePasswordVerifiCode (@Valid @RequestBody VerifyCodeRequest request) {
+    public ResponseEntity<?> changePasswordVerifiCode(@Valid @RequestBody VerifyCodeRequest request) {
+        String channel = normalize(request.getChannel());
         return ResponseEntity.ok(
                 changePasswordService.changePasswordVerifiCode(
                         request.getEmail(),
-                        request.getCode()
+                        request.getCode(),
+                        channel.isEmpty() ? "EMAIL" : channel
                 )
         );
     }
 
     @Operation(summary = "Cambiar la contrasena de un usuario verificado")
     @PostMapping({"/changePassword", "/change-password"})
-    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request){
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         return ResponseEntity.ok(
                 changePasswordService.changePassword(
                         request.getEmail(),
@@ -186,13 +214,12 @@ public class AuthController {
 
     @Operation(summary = "Confirmar codigo OTP y emitir tokens JWT")
     @PostMapping("/verify")
-    public ResponseEntity<AuthResponse> verify(
-            @Valid @RequestBody VerifyCodeRequest request,
-            HttpServletResponse response) {
-
+    public ResponseEntity<AuthResponse> verify(@Valid @RequestBody VerifyCodeRequest request,
+                                               HttpServletResponse response) {
         return ResponseEntity.ok(
                 authenticationService.verifyCode(
-                        request.getEmail(),
+                        request.getIdentifier(),
+                        request.getChannel(),
                         request.getCode(),
                         response
                 )
@@ -201,9 +228,7 @@ public class AuthController {
 
     @Operation(summary = "Renovar el access token usando la refresh cookie")
     @PostMapping("/refresh")
-    public ResponseEntity<AuthResponse> refresh(
-            HttpServletRequest request) {
-
+    public ResponseEntity<AuthResponse> refresh(HttpServletRequest request) {
         return ResponseEntity.ok(
                 authenticationService.refresh(request)
         );
@@ -212,19 +237,18 @@ public class AuthController {
     @Operation(summary = "Cerrar sesion e invalidar la refresh cookie")
     @PostMapping("/logout")
     public ResponseEntity<MessageResponse> logout(HttpServletResponse response) {
-
         authenticationService.logout(response);
         return ResponseEntity.ok(new MessageResponse("Logged out"));
     }
 
     private ResponseEntity<?> handleLogin(LoginRequest request, HttpServletRequest servletRequest) {
         String recaptchaToken = resolveRecaptchaToken(request, servletRequest);
-        String email = normalize(resolveEmail(request, servletRequest));
+        String identifier = normalize(resolveIdentifier(request, servletRequest));
         String channel = normalize(resolveChannel(request, servletRequest));
 
         log.info(
-                "Intento de login recibido. email={}, channel={}, contentType={}, hasRecaptcha={}, tokenPreview={}",
-                email,
+                "Intento de login recibido. identifier={}, channel={}, contentType={}, hasRecaptcha={}, tokenPreview={}",
+                identifier,
                 channel,
                 servletRequest.getContentType(),
                 hasText(recaptchaToken),
@@ -236,15 +260,15 @@ public class AuthController {
 
             return ResponseEntity.ok(
                     authenticationService.login(
-                            email,
+                            identifier,
                             resolvePassword(request, servletRequest),
                             channel.isEmpty() ? "EMAIL" : channel
                     )
             );
         } catch (ResponseStatusException ex) {
             log.warn(
-                    "Login rechazado. email={}, status={}, reason={}",
-                    email,
+                    "Login rechazado. identifier={}, status={}, reason={}",
+                    identifier,
                     ex.getStatusCode().value(),
                     ex.getReason()
             );
@@ -272,10 +296,16 @@ public class AuthController {
         return null;
     }
 
-    private String resolveEmail(LoginRequest request, HttpServletRequest servletRequest) {
-        if (request != null && hasText(request.getEmail())) {
-            return request.getEmail();
+    private String resolveIdentifier(LoginRequest request, HttpServletRequest servletRequest) {
+        if (request != null && hasText(request.getIdentifier())) {
+            return request.getIdentifier();
         }
+
+        String identifier = servletRequest.getParameter("identifier");
+        if (hasText(identifier)) {
+            return identifier;
+        }
+
         return servletRequest.getParameter("email");
     }
 

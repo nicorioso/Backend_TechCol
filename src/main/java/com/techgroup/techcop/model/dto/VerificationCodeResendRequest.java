@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-public class AccountExistsRequest {
+public class VerificationCodeResendRequest {
 
     @JsonAlias("email")
     @NotBlank(message = "El identificador es obligatorio")
@@ -18,12 +18,9 @@ public class AccountExistsRequest {
     )
     private String channel;
 
-    public AccountExistsRequest() {
-    }
-
-    public AccountExistsRequest(String identifier) {
-        this.identifier = identifier;
-    }
+    @JsonAlias("g-recaptcha-response")
+    @NotBlank(message = "Debes completar el reCAPTCHA")
+    private String recaptchaToken;
 
     public String getIdentifier() {
         return identifier;
@@ -33,19 +30,19 @@ public class AccountExistsRequest {
         this.identifier = identifier;
     }
 
-    public String getEmail() {
-        return identifier;
-    }
-
-    public void setEmail(String email) {
-        this.identifier = email;
-    }
-
     public String getChannel() {
         return channel;
     }
 
     public void setChannel(String channel) {
         this.channel = channel;
+    }
+
+    public String getRecaptchaToken() {
+        return recaptchaToken;
+    }
+
+    public void setRecaptchaToken(String recaptchaToken) {
+        this.recaptchaToken = recaptchaToken;
     }
 }

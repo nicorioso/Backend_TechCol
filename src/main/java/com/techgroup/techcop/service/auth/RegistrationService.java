@@ -4,5 +4,6 @@ import com.techgroup.techcop.model.dto.RegisterCustomerRequest;
 
 public interface RegistrationService {
     String registerRequest(RegisterCustomerRequest request);
-    String verifyRegister(String email, String code);
+    String resendRegisterCode(String identifier, String channel);
+    String verifyRegister(String identifier, String channel, String code);
 }

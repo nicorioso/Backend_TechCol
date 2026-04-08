@@ -13,19 +13,20 @@ import com.techgroup.techcop.security.jwt.JwtService;
 import com.techgroup.techcop.security.password.PasswordHashingService;
 import com.techgroup.techcop.service.audit.AuditLogService;
 import com.techgroup.techcop.service.auth.AuthenticationService;
+import com.techgroup.techcop.service.auth.support.AuthIdentityService;
 import com.techgroup.techcop.service.verification.VerificationCodeService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -47,6 +48,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final RestTemplate restTemplate;
     private final PasswordHashingService passwordHashingService;
     private final AuditLogService auditLogService;
+    private final AuthIdentityService authIdentityService;
     private final String googleClientId;
     private final boolean refreshCookieSecure;
     private final Environment environment;
@@ -59,6 +61,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                                      RestTemplate restTemplate,
                                      PasswordHashingService passwordHashingService,
                                      AuditLogService auditLogService,
+                                     AuthIdentityService authIdentityService,
                                      @Value("${google.client-id:}") String googleClientId,
                                      @Value("${app.security.refresh-cookie.secure:false}") boolean refreshCookieSecure,
                                      Environment environment) {
@@ -70,6 +73,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         this.restTemplate = restTemplate;
         this.passwordHashingService = passwordHashingService;
         this.auditLogService = auditLogService;
+        this.authIdentityService = authIdentityService;
         this.googleClientId = googleClientId;
         this.refreshCookieSecure = refreshCookieSecure;
         this.environment = environment;
@@ -81,21 +85,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public boolean accountExists(String email) {
-        String normalizedEmail = normalizeEmail(email);
-        return !normalizedEmail.isEmpty()
-                && customerRepository.existsByCustomerEmail(normalizedEmail);
+    public boolean accountExists(String identifier, String channel) {
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+        return authIdentityService.accountExists(identifier, verificationChannel);
     }
 
     @Override
-    public String login(String email, String password, String channel) {
+    public String login(String identifier, String password, String channel) {
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+        String authEmail = authIdentityService.resolveAuthenticationEmail(identifier, verificationChannel);
 
-        email = normalizeEmail(email);
-        upgradeLegacyPasswordIfNeeded(email, password);
+        upgradeLegacyPasswordIfNeeded(authEmail, password);
 
         try {
             authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, password)
+                    new UsernamePasswordAuthenticationToken(authEmail, password)
             );
         } catch (AuthenticationException e) {
             throw new ResponseStatusException(
@@ -105,16 +109,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         Customer customer = customerRepository
-                .findByCustomerEmail(email)
+                .findByCustomerEmail(authEmail)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!customer.isAccountVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "La cuenta aun no ha sido verificada.");
+        }
 
         verificationCodeService.generateAndSendCode(
                 customer,
-                VerificationChannel.valueOf(channel.toUpperCase()),
+                verificationChannel,
                 VerificationPurpose.LOGIN
         );
 
-        return "Verification code sent via " + channel;
+        return "Verification code sent via " + verificationChannel.name();
     }
 
     private void upgradeLegacyPasswordIfNeeded(String email, String rawPassword) {
@@ -130,17 +138,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public AuthResponse verifyCode(String email,
+    public AuthResponse verifyCode(String identifier,
+                                   String channel,
                                    String code,
                                    HttpServletResponse response) {
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+        Customer customer = authIdentityService.getCustomerByIdentifier(identifier, verificationChannel);
 
-        email = normalizeEmail(email);
-
-        Customer customer = customerRepository
-                .findByCustomerEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-        boolean valid = verificationCodeService.verifyCode(customer, code);
+        boolean valid = verificationCodeService.verifyCode(
+                customer,
+                code,
+                verificationChannel,
+                VerificationPurpose.LOGIN
+        );
 
         if (!valid) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code");
@@ -160,7 +170,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public AuthResponse authenticateWithGoogle(String credential,
                                                HttpServletResponse response) {
-
         if (googleClientId == null || googleClientId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Google login is not configured");
         }
@@ -201,7 +210,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public AuthResponse refresh(HttpServletRequest request) {
-
         if (request.getCookies() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No refresh token");
         }
@@ -216,8 +224,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
 
-        String email = jwtService.extractUsername(refreshToken);
-        email = normalizeEmail(email);
+        String email = normalizeEmail(jwtService.extractUsername(refreshToken));
 
         Customer customer = customerRepository
                 .findByCustomerEmail(email)
@@ -228,7 +235,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public void logout(HttpServletResponse response) {
-
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
                 .secure(isRefreshCookieSecure())
@@ -259,6 +265,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             changed = true;
         }
 
+        if (!customer.isAccountVerified()) {
+            customer.setAccountVerified(true);
+            changed = true;
+        }
+
         return changed ? customerRepository.save(customer) : customer;
     }
 
@@ -270,6 +281,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         customer.setCustomerPhoneNumber("");
         customer.setCustomerPassword(passwordHashingService.hashNewPassword(UUID.randomUUID().toString()));
         customer.setRole(resolveCustomerRole());
+        customer.setAccountVerified(true);
 
         return customerRepository.save(customer);
     }

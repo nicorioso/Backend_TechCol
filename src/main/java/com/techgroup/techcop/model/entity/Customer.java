@@ -37,6 +37,9 @@ public class Customer {
     @Column(name = "password_reset_verified")
     private boolean passwordRsetVerified;
 
+    @Column(name = "account_verified")
+    private Boolean accountVerified;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -127,6 +130,18 @@ public class Customer {
 
     public void setPasswordRsetVerified(boolean passwordRsetVerified) {
         this.passwordRsetVerified = passwordRsetVerified;
+    }
+
+    public boolean isAccountVerified() {
+        return accountVerified == null || accountVerified;
+    }
+
+    public Boolean getAccountVerifiedValue() {
+        return accountVerified;
+    }
+
+    public void setAccountVerified(Boolean accountVerified) {
+        this.accountVerified = accountVerified;
     }
 
     public Carts getCart() {
