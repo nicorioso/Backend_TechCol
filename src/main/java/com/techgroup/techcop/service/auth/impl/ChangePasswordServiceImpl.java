@@ -2,6 +2,7 @@ package com.techgroup.techcop.service.auth.impl;
 
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
+import com.techgroup.techcop.security.access.ResourceAuthorizationService;
 import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.security.enums.VerificationPurpose;
 import com.techgroup.techcop.security.password.PasswordHashingService;
@@ -21,17 +22,78 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
     private final VerificationCodeService verificationCodeService;
     private final AuditLogService auditLogService;
     private final AuthIdentityService authIdentityService;
+    private final ResourceAuthorizationService resourceAuthorizationService;
 
     public ChangePasswordServiceImpl(CustomerRepository customerRepository,
                                      PasswordHashingService passwordHashingService,
                                      VerificationCodeService verificationCodeService,
                                      AuditLogService auditLogService,
-                                     AuthIdentityService authIdentityService) {
+                                     AuthIdentityService authIdentityService,
+                                     ResourceAuthorizationService resourceAuthorizationService) {
         this.customerRepository = customerRepository;
         this.passwordHashingService = passwordHashingService;
         this.verificationCodeService = verificationCodeService;
         this.auditLogService = auditLogService;
         this.authIdentityService = authIdentityService;
+        this.resourceAuthorizationService = resourceAuthorizationService;
+    }
+
+    @Override
+    public String requestAuthenticatedPasswordChange(String channel) {
+        Customer customer = resourceAuthorizationService.getAuthenticatedCustomer();
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+
+        resetPasswordVerificationState(customer);
+        verificationCodeService.generateAndSendCode(
+                customer,
+                verificationChannel,
+                VerificationPurpose.CHANGE_PASSWORD
+        );
+
+        return "Verification code sent";
+    }
+
+    @Override
+    public String verifyAuthenticatedPasswordChange(String channel, String code) {
+        Customer customer = resourceAuthorizationService.getAuthenticatedCustomer();
+        VerificationChannel verificationChannel = authIdentityService.parseChannel(channel, VerificationChannel.EMAIL);
+
+        boolean valid = verificationCodeService.verifyCode(
+                customer,
+                code,
+                verificationChannel,
+                VerificationPurpose.CHANGE_PASSWORD
+        );
+
+        if (!valid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid code");
+        }
+
+        customer.setPasswordRsetVerified(true);
+        customerRepository.save(customer);
+
+        return "successful verification";
+    }
+
+    @Override
+    public String confirmAuthenticatedPasswordChange(String newPassword) {
+        Customer customer = resourceAuthorizationService.getAuthenticatedCustomer();
+
+        if (!customer.isPasswordRsetVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Verification required");
+        }
+
+        customer.setCustomerPassword(passwordHashingService.hashNewPassword(newPassword));
+        customer.setPasswordRsetVerified(false);
+        customerRepository.save(customer);
+        auditLogService.log(
+                customer.getCustomerEmail(),
+                "PASSWORD_CHANGED",
+                "CUSTOMER",
+                customer.getCustomerId() == null ? null : customer.getCustomerId().toString(),
+                "Cambio de contrasena autenticado mediante OTP"
+        );
+        return "Change password successful";
     }
 
     @Override
@@ -166,6 +228,13 @@ public class ChangePasswordServiceImpl implements ChangePasswordService {
 
         if (storedPassword != null && !storedPassword.equals(encodedPassword)) {
             customer.setCustomerPassword(encodedPassword);
+            customerRepository.save(customer);
+        }
+    }
+
+    private void resetPasswordVerificationState(Customer customer) {
+        if (customer.isPasswordRsetVerified()) {
+            customer.setPasswordRsetVerified(false);
             customerRepository.save(customer);
         }
     }

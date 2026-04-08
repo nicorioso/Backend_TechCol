@@ -149,6 +149,42 @@ public class AuthController {
         );
     }
 
+    @Operation(summary = "Solicitar OTP para cambio de contrasena del usuario autenticado")
+    @PostMapping("/password-change/request")
+    public ResponseEntity<MessageResponse> requestAuthenticatedPasswordChange(
+            @Valid @RequestBody AuthenticatedPasswordChangeRequest request) {
+        return ResponseEntity.ok(
+                new MessageResponse(
+                        changePasswordService.requestAuthenticatedPasswordChange(request.getChannel())
+                )
+        );
+    }
+
+    @Operation(summary = "Verificar OTP para cambio de contrasena del usuario autenticado")
+    @PostMapping("/password-change/verify")
+    public ResponseEntity<MessageResponse> verifyAuthenticatedPasswordChange(
+            @Valid @RequestBody AuthenticatedPasswordChangeVerifyRequest request) {
+        return ResponseEntity.ok(
+                new MessageResponse(
+                        changePasswordService.verifyAuthenticatedPasswordChange(
+                                request.getChannel(),
+                                request.getCode()
+                        )
+                )
+        );
+    }
+
+    @Operation(summary = "Confirmar nueva contrasena del usuario autenticado")
+    @PostMapping("/password-change/confirm")
+    public ResponseEntity<MessageResponse> confirmAuthenticatedPasswordChange(
+            @Valid @RequestBody AuthenticatedPasswordChangeConfirmRequest request) {
+        return ResponseEntity.ok(
+                new MessageResponse(
+                        changePasswordService.confirmAuthenticatedPasswordChange(request.getNewPassword())
+                )
+        );
+    }
+
     @Operation(summary = "Verificar el codigo para habilitar el cambio de contrasena")
     @PostMapping("/changePasswordVerifiCode")
     public ResponseEntity<?> changePasswordVerifiCode(@Valid @RequestBody VerifyCodeRequest request) {

@@ -20,6 +20,22 @@ import java.io.IOException;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final String[] PUBLIC_AUTH_PREFIXES = {
+            "/auth/login",
+            "/auth/register",
+            "/auth/registerRequest",
+            "/auth/register/resend-code",
+            "/auth/account-exists",
+            "/auth/verify",
+            "/auth/refresh",
+            "/auth/logout",
+            "/auth/google",
+            "/auth/forgot-password",
+            "/auth/password-recovery",
+            "/auth/reset-password",
+            "/auth/recaptcha",
+            "/auth/google/client-config"
+    };
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
@@ -38,8 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        // Rutas públicas
-        if (path.startsWith("/auth")) {
+        if (isPublicAuthPath(path)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -86,6 +101,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isPublicAuthPath(String path) {
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+
+        for (String publicPrefix : PUBLIC_AUTH_PREFIXES) {
+            if (path.equals(publicPrefix) || path.startsWith(publicPrefix + "/")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
