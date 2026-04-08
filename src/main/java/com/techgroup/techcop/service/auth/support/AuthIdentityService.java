@@ -3,11 +3,17 @@ package com.techgroup.techcop.service.auth.support;
 import com.techgroup.techcop.model.entity.Customer;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.security.enums.VerificationChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -15,6 +21,7 @@ import java.util.regex.Pattern;
 @Service
 public class AuthIdentityService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthIdentityService.class);
     private static final String DEFAULT_COUNTRY_CODE = "+57";
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final Pattern E164_PATTERN = Pattern.compile("^\\+[1-9]\\d{7,14}$");
@@ -110,7 +117,10 @@ public class AuthIdentityService {
 
         return switch (channel) {
             case EMAIL -> customerRepository.findByCustomerEmail(normalizedIdentifier);
-            case SMS -> findCustomerByPhoneCandidates(normalizedIdentifier);
+            case SMS -> {
+                List<Customer> customers = findCustomersByPhoneCandidates(normalizedIdentifier);
+                yield resolveSingleSmsCustomer(normalizedIdentifier, customers);
+            }
         };
     }
 
@@ -120,7 +130,12 @@ public class AuthIdentityService {
     }
 
     public boolean accountExists(String identifier, VerificationChannel channel) {
-        return findCustomerByIdentifier(identifier, channel).isPresent();
+        String normalizedIdentifier = normalizeIdentifier(identifier, channel);
+
+        return switch (channel) {
+            case EMAIL -> customerRepository.findByCustomerEmail(normalizedIdentifier).isPresent();
+            case SMS -> !findCustomersByPhoneCandidates(normalizedIdentifier).isEmpty();
+        };
     }
 
     public String resolveAuthenticationEmail(String identifier, VerificationChannel channel) {
@@ -131,15 +146,41 @@ public class AuthIdentityService {
         return getCustomerByIdentifier(identifier, channel).getCustomerEmail();
     }
 
-    private Optional<Customer> findCustomerByPhoneCandidates(String normalizedPhone) {
+    private List<Customer> findCustomersByPhoneCandidates(String normalizedPhone) {
+        List<Customer> matches = new ArrayList<>();
+        Set<String> seenCustomers = new HashSet<>();
+
         for (String candidate : buildPhoneLookupCandidates(normalizedPhone)) {
-            Optional<Customer> customer = customerRepository.findByCustomerPhoneNumber(candidate);
-            if (customer.isPresent()) {
-                return customer;
+            List<Customer> customers = customerRepository.findAllByCustomerPhoneNumberOrderByCustomerIdAsc(candidate);
+            for (Customer customer : customers) {
+                Integer customerId = customer.getCustomerId();
+                String uniqueKey = customerId == null ? customer.getCustomerEmail() : String.valueOf(customerId);
+                if (seenCustomers.add(uniqueKey)) {
+                    matches.add(customer);
+                }
             }
         }
 
-        return Optional.empty();
+        matches.sort(Comparator.comparing(
+                customer -> customer.getCustomerId() == null ? Integer.MAX_VALUE : customer.getCustomerId()
+        ));
+        return matches;
+    }
+
+    private Optional<Customer> resolveSingleSmsCustomer(String normalizedPhone, List<Customer> customers) {
+        if (customers.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (customers.size() > 1) {
+            log.warn("Se encontraron multiples cuentas para el telefono {}. total={}", normalizedPhone, customers.size());
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El numero de telefono esta asociado a varias cuentas. Inicia sesion con correo o contacta soporte."
+            );
+        }
+
+        return Optional.of(customers.getFirst());
     }
 
     private Set<String> buildPhoneLookupCandidates(String normalizedPhone) {

@@ -33,8 +33,11 @@ public class SmsServiceImpl implements SmsService {
     public void init() {
         enabled = !accountSid.isBlank() && !authToken.isBlank() && !fromNumber.isBlank();
         if (!enabled) {
+            log.warn("SMS deshabilitado: faltan credenciales/configuracion de Twilio");
             return;
         }
+
+        log.info("SMS habilitado con Twilio. from={}", maskPhone(fromNumber));
         Twilio.init(accountSid, authToken);
     }
 
@@ -47,6 +50,7 @@ public class SmsServiceImpl implements SmsService {
         }
 
         try {
+            log.info("Intentando enviar SMS. to={}, from={}", maskPhone(to), maskPhone(fromNumber));
             Message message = Message.creator(
                     new PhoneNumber(to),
                     new PhoneNumber(fromNumber),
@@ -76,5 +80,24 @@ public class SmsServiceImpl implements SmsService {
         }
 
         return "No se pudo enviar el codigo por SMS en este momento.";
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return "unknown";
+        }
+
+        String trimmed = phone.trim();
+        boolean hasPlusPrefix = trimmed.startsWith("+");
+        String digits = trimmed.replaceAll("\\D", "");
+
+        if (digits.length() <= 4) {
+            return (hasPlusPrefix ? "+" : "") + digits;
+        }
+
+        return (hasPlusPrefix ? "+" : "")
+                + digits.substring(0, Math.min(3, digits.length() - 2))
+                + "****"
+                + digits.substring(digits.length() - 2);
     }
 }
