@@ -2,7 +2,7 @@ package com.techgroup.techcop.service.auth;
 
 public interface ChangePasswordService {
     String changePasswordAuthenticate(String email, String password, String channel);
-    String changePasswordVerifiCode(String email, String code);
+    String changePasswordVerifiCode(String email, String code, String channel);
     String changePassword(String email, String newPassword);
     String requestPasswordRecovery(String identifier, String channel);
     String verifyPasswordRecoveryCode(String identifier, String channel, String code);

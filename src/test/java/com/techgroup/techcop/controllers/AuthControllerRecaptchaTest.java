@@ -9,10 +9,10 @@ import com.techgroup.techcop.security.jwt.JwtService;
 import com.techgroup.techcop.security.model.CustomUserDetailsService;
 import com.techgroup.techcop.security.ratelimit.RateLimitingFilter;
 import com.techgroup.techcop.security.recaptcha.RecaptchaService;
-import com.techgroup.techcop.support.TestCorsConfig;
 import com.techgroup.techcop.service.auth.AuthenticationService;
 import com.techgroup.techcop.service.auth.ChangePasswordService;
 import com.techgroup.techcop.service.auth.RegistrationService;
+import com.techgroup.techcop.support.TestCorsConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -94,6 +94,27 @@ class AuthControllerRecaptchaTest {
     }
 
     @Test
+    void shouldForwardIdentifierAndChannelOnSmsLoginJson() throws Exception {
+        when(authenticationService.login("+573001112233", "Secret123!", "SMS"))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "+573001112233",
+                                  "password": "Secret123!",
+                                  "channel": "SMS",
+                                  "recaptchaToken": "login-sms-captcha"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        verify(recaptchaService).validate(eq("login-sms-captcha"), any(), eq("login"));
+        verify(authenticationService).login("+573001112233", "Secret123!", "SMS");
+    }
+
+    @Test
     void shouldReadRecaptchaAliasOnLoginJson() throws Exception {
         when(authenticationService.login("user@test.com", "Secret123!", "EMAIL"))
                 .thenReturn(null);
@@ -126,6 +147,7 @@ class AuthControllerRecaptchaTest {
                                   "customerEmail": "user@test.com",
                                   "customerPassword": "Secret123!",
                                   "customerPhoneNumber": "+573001112233",
+                                  "channel": "SMS",
                                   "g-recaptcha-response": "register-token"
                                 }
                                 """))
@@ -133,6 +155,27 @@ class AuthControllerRecaptchaTest {
                 .andExpect(content().string("Verification code sent"));
 
         verify(recaptchaService).validate(eq("register-token"), any(), eq("register"));
+    }
+
+    @Test
+    void shouldForwardRecaptchaTokenOnRegisterResend() throws Exception {
+        when(registrationService.resendRegisterCode("+573001112233", "SMS"))
+                .thenReturn("Verification code sent");
+
+        mockMvc.perform(post("/auth/register/resend-code")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "+573001112233",
+                                  "channel": "SMS",
+                                  "recaptchaToken": "register-resend-token"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Verification code sent"));
+
+        verify(recaptchaService).validate(eq("register-resend-token"), any(), eq("register-resend"));
+        verify(registrationService).resendRegisterCode("+573001112233", "SMS");
     }
 
     @Test
