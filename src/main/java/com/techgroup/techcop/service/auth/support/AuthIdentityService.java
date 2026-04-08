@@ -7,6 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
@@ -102,24 +105,22 @@ public class AuthIdentityService {
         return candidate;
     }
 
-    public Customer getCustomerByIdentifier(String identifier, VerificationChannel channel) {
+    public Optional<Customer> findCustomerByIdentifier(String identifier, VerificationChannel channel) {
         String normalizedIdentifier = normalizeIdentifier(identifier, channel);
 
         return switch (channel) {
-            case EMAIL -> customerRepository.findByCustomerEmail(normalizedIdentifier)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-            case SMS -> customerRepository.findByCustomerPhoneNumber(normalizedIdentifier)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+            case EMAIL -> customerRepository.findByCustomerEmail(normalizedIdentifier);
+            case SMS -> findCustomerByPhoneCandidates(normalizedIdentifier);
         };
     }
 
-    public boolean accountExists(String identifier, VerificationChannel channel) {
-        String normalizedIdentifier = normalizeIdentifier(identifier, channel);
+    public Customer getCustomerByIdentifier(String identifier, VerificationChannel channel) {
+        return findCustomerByIdentifier(identifier, channel)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
 
-        return switch (channel) {
-            case EMAIL -> customerRepository.existsByCustomerEmail(normalizedIdentifier);
-            case SMS -> customerRepository.existsByCustomerPhoneNumber(normalizedIdentifier);
-        };
+    public boolean accountExists(String identifier, VerificationChannel channel) {
+        return findCustomerByIdentifier(identifier, channel).isPresent();
     }
 
     public String resolveAuthenticationEmail(String identifier, VerificationChannel channel) {
@@ -128,5 +129,35 @@ public class AuthIdentityService {
         }
 
         return getCustomerByIdentifier(identifier, channel).getCustomerEmail();
+    }
+
+    private Optional<Customer> findCustomerByPhoneCandidates(String normalizedPhone) {
+        for (String candidate : buildPhoneLookupCandidates(normalizedPhone)) {
+            Optional<Customer> customer = customerRepository.findByCustomerPhoneNumber(candidate);
+            if (customer.isPresent()) {
+                return customer;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Set<String> buildPhoneLookupCandidates(String normalizedPhone) {
+        Set<String> candidates = new LinkedHashSet<>();
+        candidates.add(normalizedPhone);
+
+        String digitsOnly = normalizedPhone.replaceAll("\\D", "");
+        if (!digitsOnly.isEmpty()) {
+            candidates.add(digitsOnly);
+        }
+
+        String countryDigits = DEFAULT_COUNTRY_CODE.replaceAll("\\D", "");
+        if (!countryDigits.isEmpty()
+                && digitsOnly.startsWith(countryDigits)
+                && digitsOnly.length() > countryDigits.length()) {
+            candidates.add(digitsOnly.substring(countryDigits.length()));
+        }
+
+        return candidates;
     }
 }

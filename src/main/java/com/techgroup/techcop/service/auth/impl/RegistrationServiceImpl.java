@@ -68,7 +68,7 @@ public class RegistrationServiceImpl implements RegistrationService {
 
         if (!normalizedPhone.isEmpty()) {
             normalizedPhone = authIdentityService.normalizePhone(normalizedPhone);
-            if (customerRepository.existsByCustomerPhoneNumber(normalizedPhone)) {
+            if (authIdentityService.accountExists(normalizedPhone, VerificationChannel.SMS)) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
                         "Ya existe una cuenta registrada con ese telefono"

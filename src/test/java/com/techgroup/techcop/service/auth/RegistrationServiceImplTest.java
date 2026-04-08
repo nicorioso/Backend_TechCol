@@ -58,7 +58,7 @@ class RegistrationServiceImplTest {
         when(authIdentityService.normalizeEmail("USER@TECHCOL.COM")).thenReturn("user@techcol.com");
         when(authIdentityService.normalizePhone("3001112233")).thenReturn("+573001112233");
         when(customerRepository.existsByCustomerEmail("user@techcol.com")).thenReturn(false);
-        when(customerRepository.existsByCustomerPhoneNumber("+573001112233")).thenReturn(false);
+        when(authIdentityService.accountExists("+573001112233", VerificationChannel.SMS)).thenReturn(false);
         when(passwordHashingService.hashNewPassword("Secret123!")).thenReturn("hashed-password");
         when(roleRepository.findByRoleName("ROLE_CLIENTE")).thenReturn(java.util.Optional.of(role));
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));

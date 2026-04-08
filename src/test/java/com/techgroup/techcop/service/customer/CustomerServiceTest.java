@@ -8,7 +8,9 @@ import com.techgroup.techcop.model.entity.Role;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.repository.RoleRepository;
 import com.techgroup.techcop.security.access.ResourceAuthorizationService;
+import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.security.password.PasswordHashingService;
+import com.techgroup.techcop.service.auth.support.AuthIdentityService;
 import com.techgroup.techcop.service.customer.impl.CustomerServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +45,9 @@ class CustomerServiceTest {
     @Mock
     private PasswordHashingService passwordHashingService;
 
+    @Mock
+    private AuthIdentityService authIdentityService;
+
     @InjectMocks
     private CustomerServiceImpl customerService;
 
@@ -53,11 +58,14 @@ class CustomerServiceTest {
         request.setCustomerName(" Ana ");
         request.setCustomerLastName(" Lopez ");
         request.setCustomerEmail(" ANA@TECHCOL.COM ");
-        request.setCustomerPhoneNumber(" +573001112233 ");
+        request.setCustomerPhoneNumber(" 3001112233 ");
 
         doNothing().when(resourceAuthorizationService).assertCurrentCustomer(1);
         when(customerRepository.findById(1)).thenReturn(Optional.of(existing));
         when(customerRepository.findByCustomerEmail("ana@techcol.com")).thenReturn(Optional.empty());
+        when(authIdentityService.normalizePhone("3001112233")).thenReturn("+573001112233");
+        when(authIdentityService.findCustomerByIdentifier("+573001112233", VerificationChannel.SMS))
+                .thenReturn(Optional.empty());
         when(passwordHashingService.encodeIfNeeded("legacy-password")).thenReturn("encoded-password");
         when(customerRepository.save(any(Customer.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -69,6 +77,31 @@ class CustomerServiceTest {
         assertThat(response.getCustomerPhoneNumber()).isEqualTo("+573001112233");
         assertThat(existing.getCustomerPassword()).isEqualTo("encoded-password");
         verify(customerRepository).save(existing);
+    }
+
+    @Test
+    void shouldRejectDuplicatePhoneWhenUpdatingCustomer() {
+        Customer existing = buildCustomer(1, "old@techcol.com");
+        Customer other = buildCustomer(2, "other@techcol.com");
+        CustomerProfileUpdateRequest request = new CustomerProfileUpdateRequest();
+        request.setCustomerEmail("old@techcol.com");
+        request.setCustomerPhoneNumber("3001112233");
+
+        doNothing().when(resourceAuthorizationService).assertCurrentCustomer(1);
+        when(customerRepository.findById(1)).thenReturn(Optional.of(existing));
+        when(customerRepository.findByCustomerEmail("old@techcol.com")).thenReturn(Optional.of(existing));
+        when(authIdentityService.normalizePhone("3001112233")).thenReturn("+573001112233");
+        when(authIdentityService.findCustomerByIdentifier("+573001112233", VerificationChannel.SMS))
+                .thenReturn(Optional.of(other));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> customerService.updateCustomer(1, request)
+        );
+
+        assertThat(exception.getStatusCode().value()).isEqualTo(400);
+        assertThat(exception.getReason()).isEqualTo("Phone is already in use");
+        verify(customerRepository, never()).save(any(Customer.class));
     }
 
     @Test

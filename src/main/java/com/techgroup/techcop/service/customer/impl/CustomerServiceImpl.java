@@ -8,7 +8,9 @@ import com.techgroup.techcop.model.entity.Role;
 import com.techgroup.techcop.repository.CustomerRepository;
 import com.techgroup.techcop.repository.RoleRepository;
 import com.techgroup.techcop.security.access.ResourceAuthorizationService;
+import com.techgroup.techcop.security.enums.VerificationChannel;
 import com.techgroup.techcop.security.password.PasswordHashingService;
+import com.techgroup.techcop.service.auth.support.AuthIdentityService;
 import com.techgroup.techcop.service.customer.CustomerService;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -27,15 +29,18 @@ public class CustomerServiceImpl implements CustomerService {
     private final RoleRepository roleRepository;
     private final ResourceAuthorizationService resourceAuthorizationService;
     private final PasswordHashingService passwordHashingService;
+    private final AuthIdentityService authIdentityService;
 
     public CustomerServiceImpl(CustomerRepository customerRepository,
                                RoleRepository roleRepository,
                                ResourceAuthorizationService resourceAuthorizationService,
-                               PasswordHashingService passwordHashingService) {
+                               PasswordHashingService passwordHashingService,
+                               AuthIdentityService authIdentityService) {
         this.customerRepository = customerRepository;
         this.roleRepository = roleRepository;
         this.resourceAuthorizationService = resourceAuthorizationService;
         this.passwordHashingService = passwordHashingService;
+        this.authIdentityService = authIdentityService;
     }
 
     @Override
@@ -102,10 +107,19 @@ public class CustomerServiceImpl implements CustomerService {
                     throw new ResponseStatusException(BAD_REQUEST, "Email is already in use");
                 });
 
+        String normalizedPhone = normalizePhone(request.getCustomerPhoneNumber());
+        if (normalizedPhone != null) {
+            authIdentityService.findCustomerByIdentifier(normalizedPhone, VerificationChannel.SMS)
+                    .filter(other -> !other.getCustomerId().equals(id))
+                    .ifPresent(other -> {
+                        throw new ResponseStatusException(BAD_REQUEST, "Phone is already in use");
+                    });
+        }
+
         existing.setCustomerName(trimToEmpty(request.getCustomerName()));
         existing.setCustomerLastName(trimToEmpty(request.getCustomerLastName()));
         existing.setCustomerEmail(normalizedEmail);
-        existing.setCustomerPhoneNumber(trimToNull(request.getCustomerPhoneNumber()));
+        existing.setCustomerPhoneNumber(normalizedPhone);
 
         return CustomerResponse.fromEntity(saveCustomer(existing));
     }
@@ -139,5 +153,14 @@ public class CustomerServiceImpl implements CustomerService {
     private String trimToNull(String value) {
         String trimmed = trimToEmpty(value);
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizePhone(String phone) {
+        String trimmed = trimToEmpty(phone);
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+
+        return authIdentityService.normalizePhone(trimmed);
     }
 }
